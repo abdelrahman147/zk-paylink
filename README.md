@@ -102,6 +102,128 @@ Cross-chain payment protocol enabling private transactions from Zcash to Solana 
 - Reduced gas costs compared to Ethereum-based bridges
 - Efficient proof verification algorithms
 
+## API Reference
+
+### ProtocolAPI Class
+
+Initialize the API:
+```javascript
+const api = new ProtocolAPI();
+api.init(bridge);
+```
+
+### Methods
+
+**getStatus()**
+Returns protocol status and pool statistics.
+
+Response:
+```javascript
+{
+    status: 'operational',
+    version: 'v1',
+    pool: {
+        balance: 0.0,
+        totalTransactions: 0,
+        activeUsers: 0,
+        pendingTransactions: 0
+    },
+    chains: {
+        zcash: { connected: true, poolAddress: 'zt1...' },
+        solana: { connected: true, wallet: 'address...' }
+    },
+    timestamp: 1234567890
+}
+```
+
+**bridgeZecToSolana(amount, recipient)**
+Bridges ZEC to Solana. Amount in ZEC, recipient is Solana address.
+
+Returns:
+```javascript
+{
+    success: true,
+    data: {
+        zcashTxid: 'txid',
+        solanaTxid: 'signature',
+        amount: 1.0,
+        recipient: 'address'
+    },
+    timestamp: 1234567890
+}
+```
+
+**checkTransaction(txid)**
+Checks transaction status by Zcash TXID or Solana signature.
+
+Returns:
+```javascript
+{
+    success: true,
+    data: {
+        exists: true,
+        confirmed: true,
+        zcashTxid: 'txid',
+        solanaTxid: 'signature'
+    },
+    timestamp: 1234567890
+}
+```
+
+**getPoolIntegrity()**
+Returns pool integrity report with validation checks.
+
+Returns:
+```javascript
+{
+    success: true,
+    data: {
+        valid: true,
+        zcashConnected: true,
+        solanaConnected: true,
+        checks: { balance: true, transactions: true },
+        warnings: []
+    },
+    timestamp: 1234567890
+}
+```
+
+**getRecentTransactions(limit)**
+Gets recent transactions. Limit between 1-1000, default 10.
+
+Returns:
+```javascript
+{
+    success: true,
+    data: [/* array of transactions */],
+    count: 10,
+    limit: 10,
+    timestamp: 1234567890
+}
+```
+
+**sendPayment(amount, recipient, memo)**
+Sends SOL payment. Amount in SOL, recipient is Solana address, memo is optional string.
+
+Returns:
+```javascript
+{
+    success: true,
+    signature: 'transaction-signature',
+    amount: 0.01,
+    recipient: 'address',
+    memo: 'memo-text',
+    timestamp: 1234567890
+}
+```
+
+Throws error if:
+- Bridge not initialized
+- Solana connection not available
+- Wallet not connected
+- Invalid amount or recipient
+- Transaction rejected or failed
+
 ## Configuration
 
 Create `config.js` from `config.example.js`:

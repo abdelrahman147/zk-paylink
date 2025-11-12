@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Terminal Header -->
+    
     <div class="terminal-bar">
         <div class="terminal-controls">
             <span class="control close"></span>
@@ -20,7 +20,7 @@
         <div class="terminal-title">zcash-protocol@solana:~$</div>
     </div>
 
-    <!-- Navigation -->
+    
     <nav class="nav" id="nav">
         <div class="nav-container">
             <div class="nav-logo">
@@ -39,7 +39,7 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    
     <section class="hero">
         <div class="container">
             <div class="hero-content">
@@ -141,7 +141,7 @@
         </div>
     </section>
 
-    <!-- Protocol Section -->
+    
     <section class="protocol-section" id="protocol">
         <div class="container">
             <div class="section-header">
@@ -221,7 +221,7 @@
         </div>
     </section>
 
-    <!-- Proof Section -->
+    
     <section class="proof-section" id="proof">
         <div class="container">
             <div class="section-header">
@@ -270,7 +270,7 @@ Proof verified successfully</code></pre>
         </div>
     </section>
 
-    <!-- Code Examples Section -->
+    
     <section class="code-examples" id="docs">
         <div class="container">
             <div class="section-header">
@@ -332,7 +332,7 @@ Chain synchronization OK</code></pre>
         </div>
     </section>
 
-    <!-- Transaction Checker Section -->
+    
     <section class="checker-section" id="checker">
         <div class="container">
             <div class="section-header">
@@ -370,7 +370,7 @@ Chain synchronization OK</code></pre>
         </div>
     </section>
 
-    <!-- Wallet Portfolio Modal -->
+    
     <div id="wallet-modal" class="wallet-modal" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
@@ -378,12 +378,12 @@ Chain synchronization OK</code></pre>
                 <button class="modal-close" id="modal-close">×</button>
             </div>
             <div class="modal-body" id="modal-body">
-                <!-- Content will be dynamically loaded -->
+                
             </div>
         </div>
     </div>
 
-    <!-- Bridge Interface Section -->
+    
     <section class="bridge-interface-section" id="bridge-interface">
         <div class="container">
             <div class="section-header">
@@ -428,7 +428,7 @@ Chain synchronization OK</code></pre>
         </div>
     </section>
 
-    <!-- Mini Game Section -->
+    
     <section class="game-section" id="game">
         <div class="container">
             <div class="section-header">
@@ -476,7 +476,7 @@ Chain synchronization OK</code></pre>
         </div>
     </section>
 
-    <!-- API Documentation Section -->
+    
     <section class="api-section" id="api">
         <div class="container">
             <div class="section-header">
@@ -524,32 +524,31 @@ Chain synchronization OK</code></pre>
                             <span class="code-lang">javascript</span>
                             <button class="copy-btn">Copy</button>
                         </div>
-                        <pre><code>// Initialize API
-const api = new ProtocolAPI();
+                        <pre><code>const api = new ProtocolAPI();
 api.init(bridge);
 
-// Get protocol status
 const status = await api.getStatus();
-console.log(status);
 
-// Bridge ZEC to Solana
 const result = await api.bridgeZecToSolana(1.0, 'recipient-address');
-console.log(result);
 
-// Send payment for game/service
 const payment = await api.sendPayment(
     0.01, 
-    'Hw87YF66ND8v7yAyJKEJqMvDxZrHAHiHy8qsWghddC2Z',
-    'Game payment'
+    'recipient-address',
+    'memo-text'
 );
-console.log(payment);</code></pre>
+
+const txStatus = await api.checkTransaction('txid-or-signature');
+
+const integrity = await api.getPoolIntegrity();
+
+const transactions = await api.getRecentTransactions(10);</code></pre>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
+    
     <section class="features-section">
         <div class="container">
             <div class="section-header">
@@ -591,7 +590,7 @@ console.log(payment);</code></pre>
         </div>
     </section>
 
-    <!-- Footer -->
+    
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
