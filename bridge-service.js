@@ -959,12 +959,15 @@ class ZcashSolanaBridge {
         }
         
         
-        const lamports = Math.round(amount * 1e9); 
-        if (lamports <= 0) {
-            throw new Error('Invalid amount: must be greater than 0');
+        const lamportsValue = Number(amount) * 1e9;
+        const lamports = Number(Math.round(lamportsValue));
+        
+        if (!Number.isFinite(lamports) || lamports <= 0 || lamports > Number.MAX_SAFE_INTEGER) {
+            throw new Error('Invalid amount: must be a positive number within safe range');
         }
         
-        const transaction = new this.SolanaWeb3.Transaction().add(
+        const transaction = new this.SolanaWeb3.Transaction();
+        transaction.add(
             this.SolanaWeb3.SystemProgram.transfer({
                 fromPubkey: fromPubkey,
                 toPubkey: toPubkey,
