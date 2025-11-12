@@ -133,6 +133,11 @@ async function initBridge() {
 
 
 function initBridgeUI() {
+    if (!document.getElementById('connect-wallet-btn')) {
+        console.error('Button elements not found - DOM may not be ready');
+        setTimeout(initBridgeUI, 100);
+        return;
+    }
     
     const connectBtn = document.getElementById('connect-wallet-btn');
     const bridgeBtn = document.getElementById('bridge-btn');
