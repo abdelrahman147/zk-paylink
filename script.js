@@ -7,9 +7,26 @@ let targetTimeout = null;
 
 
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof CONFIG === 'undefined') {
+        window.CONFIG = {
+            SOLANA_RPC: [
+                'https://api.mainnet-beta.solana.com',
+                'https://rpc.ankr.com/solana',
+                'https://solana.public-rpc.com'
+            ],
+            ZCASH_RPC: {
+                URL: '',
+                USER: '',
+                PASSWORD: ''
+            },
+            GOOGLE_SHEETS: {
+                SHEET_ID: '',
+                API_KEY: ''
+            }
+        };
+    }
     
     initBridge();
-    
     
     initTerminalAnimation();
     initScrollAnimations();
@@ -20,9 +37,28 @@ document.addEventListener('DOMContentLoaded', function() {
     initFlowSteps();
     initBridgeUI();
     
-    
     initAPI();
     initGame();
+    
+    const viewDocsBtn = document.getElementById('view-docs-btn');
+    if (viewDocsBtn) {
+        viewDocsBtn.addEventListener('click', () => {
+            const docsSection = document.getElementById('docs');
+            if (docsSection) {
+                docsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
+    
+    const launchAppBtn = document.querySelector('.btn-primary:not([id])');
+    if (launchAppBtn && launchAppBtn.textContent.includes('Launch App')) {
+        launchAppBtn.addEventListener('click', () => {
+            const bridgeSection = document.getElementById('bridge-interface');
+            if (bridgeSection) {
+                bridgeSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
 });
 
 
