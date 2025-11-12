@@ -960,22 +960,26 @@ class ZcashSolanaBridge {
         
         
         const lamportsValue = parseFloat(amount) * 1e9;
-        const lamports = Math.floor(lamportsValue);
+        let lamports = Math.floor(lamportsValue);
         
         if (!Number.isFinite(lamports) || lamports <= 0 || lamports > Number.MAX_SAFE_INTEGER) {
             throw new Error('Invalid amount: must be a positive number within safe range');
         }
         
+        lamports = parseInt(lamports.toString(), 10);
+        
         const transaction = new this.SolanaWeb3.Transaction();
         
-        const transferParams = {
-            fromPubkey: fromPubkey,
-            toPubkey: toPubkey,
-            lamports: lamports
-        };
-        
-        const transferInstruction = this.SolanaWeb3.SystemProgram.transfer(transferParams);
-        transaction.add(transferInstruction);
+        try {
+            const transferInstruction = this.SolanaWeb3.SystemProgram.transfer({
+                fromPubkey: fromPubkey,
+                toPubkey: toPubkey,
+                lamports: lamports
+            });
+            transaction.add(transferInstruction);
+        } catch (instructionError) {
+            throw new Error(`Failed to create transfer instruction: ${instructionError.message}`);
+        }
         
         
         let blockhash, lastValidBlockHeight;

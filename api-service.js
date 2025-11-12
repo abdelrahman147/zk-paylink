@@ -254,22 +254,26 @@ class ProtocolAPI {
             }
             
             const lamportsValue = parseFloat(amount) * 1e9;
-            const lamports = Math.floor(lamportsValue);
+            let lamports = Math.floor(lamportsValue);
             
             if (!Number.isFinite(lamports) || lamports <= 0 || lamports > Number.MAX_SAFE_INTEGER) {
                 throw new Error('Invalid amount: must be a positive number within safe range');
             }
+            
+            lamports = parseInt(lamports.toString(), 10);
 
             const transaction = new this.bridge.SolanaWeb3.Transaction();
             
-            const transferParams = {
-                fromPubkey: senderPubkey,
-                toPubkey: recipientPubkey,
-                lamports: lamports
-            };
-            
-            const transferInstruction = this.bridge.SolanaWeb3.SystemProgram.transfer(transferParams);
-            transaction.add(transferInstruction);
+            try {
+                const transferInstruction = this.bridge.SolanaWeb3.SystemProgram.transfer({
+                    fromPubkey: senderPubkey,
+                    toPubkey: recipientPubkey,
+                    lamports: lamports
+                });
+                transaction.add(transferInstruction);
+            } catch (instructionError) {
+                throw new Error(`Failed to create transfer instruction: ${instructionError.message}`);
+            }
 
             if (memo && memo.trim()) {
                 const memoProgram = new this.bridge.SolanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
