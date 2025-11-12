@@ -454,7 +454,7 @@ Chain synchronization OK</code></pre>
                             <span class="info-value" id="game-time">0s</span>
                         </div>
                     </div>
-                    <button class="btn-primary btn-large" id="start-game-btn">Pay 0.01 SOL & Start Game</button>
+                    <button class="btn-primary btn-large" id="start-game-btn" onclick="if(typeof startGame==='function'){startGame().catch(e=>alert('Error: '+e.message));}else{alert('Please wait for page to load');}">Pay 0.01 SOL & Start Game</button>
                     <div id="game-status" class="game-status"></div>
                 </div>
                 <div class="game-area" id="game-area">
