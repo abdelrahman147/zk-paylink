@@ -24,9 +24,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 API_KEY: ''
             }
         };
+        console.log('CONFIG initialized with defaults');
     }
     
-    initBridge();
+    try {
+        initBridge();
+    } catch (error) {
+        console.error('Bridge initialization error:', error);
+    }
     
     initTerminalAnimation();
     initScrollAnimations();

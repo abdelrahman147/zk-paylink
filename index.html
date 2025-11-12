@@ -625,7 +625,27 @@ const transactions = await api.getRecentTransactions(10);</code></pre>
     <script>
         window.solanaWeb3 = solanaWeb3;
     </script>
-        <script src="config.js"></script>
+    <script>
+        if (typeof CONFIG === 'undefined') {
+            window.CONFIG = {
+                SOLANA_RPC: [
+                    'https://api.mainnet-beta.solana.com',
+                    'https://rpc.ankr.com/solana',
+                    'https://solana.public-rpc.com'
+                ],
+                ZCASH_RPC: {
+                    URL: '',
+                    USER: '',
+                    PASSWORD: ''
+                },
+                GOOGLE_SHEETS: {
+                    SHEET_ID: '',
+                    API_KEY: ''
+                }
+            };
+        }
+    </script>
+    <script src="config.js" onerror="console.log('config.js not found, using defaults')"></script>
         <script src="bridge-service.js"></script>
         <script src="test-suite.js"></script>
         <script src="api-service.js"></script>
