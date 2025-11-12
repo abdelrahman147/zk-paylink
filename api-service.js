@@ -268,8 +268,13 @@ class ProtocolAPI {
 
             if (memo && memo.trim()) {
                 const memoProgram = new this.bridge.SolanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
-                const encoder = new TextEncoder();
-                const memoData = encoder.encode(memo);
+                let memoData;
+                if (typeof Buffer !== 'undefined' && Buffer.from) {
+                    memoData = Buffer.from(memo, 'utf8');
+                } else {
+                    const encoder = new TextEncoder();
+                    memoData = encoder.encode(memo);
+                }
                 transaction.add(
                     new this.bridge.SolanaWeb3.TransactionInstruction({
                         keys: [{
