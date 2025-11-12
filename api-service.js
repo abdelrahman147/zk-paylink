@@ -1,7 +1,4 @@
-/**
- * ZCash → Solana Protocol API Service
- * Provides RESTful API endpoints for protocol operations
- */
+
 
 class ProtocolAPI {
     constructor(config = {}) {
@@ -10,16 +7,12 @@ class ProtocolAPI {
         this.version = 'v1';
     }
 
-    /**
-     * Initialize API with bridge instance
-     */
+    
     init(bridgeInstance) {
         this.bridge = bridgeInstance;
     }
 
-    /**
-     * Get protocol status
-     */
+    
     async getStatus() {
         if (!this.bridge) {
             throw new Error('Bridge not initialized');
@@ -28,12 +21,12 @@ class ProtocolAPI {
         try {
             const stats = this.bridge.getPoolStats();
             
-            // Validate stats
+            
             if (!stats || typeof stats !== 'object') {
                 throw new Error('Invalid pool stats returned from bridge');
             }
             
-            // Ensure all values are valid numbers
+            
             const safeStats = {
                 poolBalance: typeof stats.poolBalance === 'number' ? stats.poolBalance : 0,
                 totalTransactions: typeof stats.totalTransactions === 'number' ? stats.totalTransactions : 0,
@@ -41,7 +34,7 @@ class ProtocolAPI {
                 pendingTransactions: typeof stats.pendingTransactions === 'number' ? stats.pendingTransactions : 0
             };
             
-            // Validate no NaN or Infinity
+            
             Object.keys(safeStats).forEach(key => {
                 if (isNaN(safeStats[key]) || !isFinite(safeStats[key])) {
                     safeStats[key] = 0;
@@ -74,9 +67,7 @@ class ProtocolAPI {
         }
     }
 
-    /**
-     * Bridge ZEC to Solana
-     */
+    
     async bridgeZecToSolana(amount, recipient) {
         if (!this.bridge) {
             throw new Error('Bridge not initialized');
@@ -103,9 +94,7 @@ class ProtocolAPI {
         }
     }
 
-    /**
-     * Check transaction status
-     */
+    
     async checkTransaction(txid) {
         if (!this.bridge) {
             throw new Error('Bridge not initialized');
@@ -122,7 +111,7 @@ class ProtocolAPI {
         try {
             const result = await this.bridge.checkTransaction(txid.trim());
             
-            // Validate result structure
+            
             if (!result || typeof result !== 'object') {
                 return {
                     success: false,
@@ -145,9 +134,7 @@ class ProtocolAPI {
         }
     }
 
-    /**
-     * Get pool integrity report
-     */
+    
     async getPoolIntegrity() {
         if (!this.bridge) {
             throw new Error('Bridge not initialized');
@@ -155,7 +142,7 @@ class ProtocolAPI {
 
         try {
             const report = await this.bridge.checkPoolIntegrity();
-            // Always return success - RPC errors are handled silently
+            
             return {
                 success: true,
                 data: report || {
@@ -168,7 +155,7 @@ class ProtocolAPI {
                 timestamp: Date.now()
             };
         } catch (error) {
-            // Silent fallback - return default structure
+            
             return {
                 success: true,
                 data: {
@@ -183,15 +170,13 @@ class ProtocolAPI {
         }
     }
 
-    /**
-     * Get recent transactions
-     */
+    
     async getRecentTransactions(limit = 10) {
         if (!this.bridge) {
             throw new Error('Bridge not initialized');
         }
 
-        // Validate and sanitize limit
+        
         const safeLimit = Math.max(1, Math.min(1000, parseInt(limit) || 10));
         
         if (isNaN(safeLimit) || safeLimit <= 0) {
@@ -205,7 +190,7 @@ class ProtocolAPI {
         try {
             const transactions = this.bridge.getRecentTransactions(safeLimit);
             
-            // Validate response
+            
             if (!Array.isArray(transactions)) {
                 return {
                     success: false,
@@ -230,9 +215,7 @@ class ProtocolAPI {
         }
     }
 
-    /**
-     * Send SOL payment (for games/services)
-     */
+    
     async sendPayment(amount, recipient, memo = '') {
         if (!this.bridge) {
             throw new Error('Bridge not initialized');
@@ -261,7 +244,7 @@ class ProtocolAPI {
         try {
             await this.bridge.loadSolanaWeb3();
             
-            // Validate recipient address
+            
             let recipientPubkey, senderPubkey;
             try {
                 recipientPubkey = new this.bridge.SolanaWeb3.PublicKey(recipient);
@@ -283,9 +266,10 @@ class ProtocolAPI {
                 })
             );
 
-            // Add memo if provided
             if (memo && memo.trim()) {
                 const memoProgram = new this.bridge.SolanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+                const encoder = new TextEncoder();
+                const memoData = encoder.encode(memo);
                 transaction.add(
                     new this.bridge.SolanaWeb3.TransactionInstruction({
                         keys: [{
@@ -294,7 +278,7 @@ class ProtocolAPI {
                             isWritable: false
                         }],
                         programId: memoProgram,
-                        data: Buffer.from(memo, 'utf8')
+                        data: memoData
                     })
                 );
             }
@@ -333,7 +317,7 @@ class ProtocolAPI {
     }
 }
 
-// Export for use
+
 if (typeof window !== 'undefined') {
     window.ProtocolAPI = ProtocolAPI;
 }

@@ -1,16 +1,16 @@
-// Global bridge instance
+
 let bridge = null;
 let api = null;
 let game = null;
 let gameInterval = null;
 let targetTimeout = null;
 
-// Wait for DOM to load
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize bridge service
+    
     initBridge();
     
-    // Initialize all features
+    
     initTerminalAnimation();
     initScrollAnimations();
     initTabSwitching();
@@ -20,52 +20,48 @@ document.addEventListener('DOMContentLoaded', function() {
     initFlowSteps();
     initBridgeUI();
     
-    // Initialize API and Game
+    
     initAPI();
     initGame();
 });
 
-// Initialize Bridge Service
+
 async function initBridge() {
     try {
-        // Use QuickNode Solana RPC endpoint (primary) with public endpoints as fallback
-        // Multiple endpoints for redundancy and rate limit distribution
+        
+        
         const solanaRpcUrls = [
-            'https://prettiest-icy-sea.solana-mainnet.quiknode.pro/5426a8ab0b64bdfb1d9e9b7cdda36020b6c94669',
-            'https://api.mainnet-beta.solana.com',
-            'https://solana-api.projectserum.com',
-            'https://rpc.ankr.com/solana',
-            'https://solana.public-rpc.com',
-            'https://rpc.solana.com',
-            'https://solana-mainnet.g.alchemy.com/v2/demo'
+            'https:
+            'https:
+            'https:
         ];
         
         try {
             bridge = new ZcashSolanaBridge({
-                solanaRpcUrls: solanaRpcUrls, // Multiple endpoints for failover
-                solanaRpcUrl: solanaRpcUrls[0], // Primary RPC endpoint
-                zcashRpcUrl: 'http://localhost:8232', // Configure your Zcash RPC endpoint
-                zcashRpcUser: '', // Add your Zcash RPC credentials
+                solanaRpcUrls: solanaRpcUrls, 
+                solanaRpcUrl: solanaRpcUrls[0], 
+                zcashRpcUrl: 'http:
+                zcashRpcUser: '', 
                 zcashRpcPassword: '',
-                shieldedPoolAddress: null // Will be obtained from Zcash RPC if not provided
+                shieldedPoolAddress: null 
             });
             
-            // Make bridge globally available
+            
             window.bridge = bridge;
             
-            // Wait for initialization to complete (bridge.init() is called in constructor)
-            // Give it time to initialize, even if Zcash RPC fails
+            
+            
             await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // Initialize API with bridge (even if initialization had errors)
+            
             if (api && bridge) {
                 api.init(bridge);
                 console.log('API initialized with bridge');
             }
         } catch (error) {
             console.error('Bridge creation failed:', error);
-            // Bridge might still be created but initialization failed
-            // Try to initialize API anyway if bridge exists
+            
+            
             if (api && bridge) {
                 try {
                     api.init(bridge);
@@ -76,32 +72,32 @@ async function initBridge() {
             }
         }
         
-        // Initialize game with API
+        
         if (game && api) {
             game.init(api);
         }
         
-        // Listen to bridge events
+        
         bridge.on('transaction', (tx) => {
             updateTransactionList();
             updatePoolStats();
         });
         
-        // Update stats periodically
+        
         setInterval(() => {
             updatePoolStats();
         }, 5000);
         
-        // Initial stats update
+        
         updatePoolStats();
     } catch (error) {
         console.error('Failed to initialize bridge:', error);
     }
 }
 
-// Initialize Bridge UI
+
 function initBridgeUI() {
-    // Connect wallet button
+    
     const connectBtn = document.getElementById('connect-wallet-btn');
     const bridgeBtn = document.getElementById('bridge-btn');
     const useWalletBtn = document.getElementById('use-wallet-btn');
@@ -134,7 +130,7 @@ function initBridgeUI() {
         });
     }
     
-    // Update bridge button state when inputs change
+    
     if (zcashAmountInput && solanaRecipientInput) {
         [zcashAmountInput, solanaRecipientInput].forEach(input => {
             input.addEventListener('input', () => {
@@ -143,54 +139,56 @@ function initBridgeUI() {
         });
     }
     
-    // Load transaction history
+    
     updateTransactionList();
     
-    // Initialize checker UI
+    
     initCheckerUI();
     
-    // Initialize wallet modals
+    
     initWalletModals();
     
-    // Initialize test suite (for development)
+    
     initTestSuite();
 }
 
-// Initialize API Service
+
 function initAPI() {
     try {
         api = new ProtocolAPI();
-        window.api = api; // Make API globally available
-        // API will be initialized with bridge once bridge is ready
+        window.api = api; 
+        
         console.log('✅ API Service initialized');
     } catch (error) {
         console.error('Failed to initialize API:', error);
     }
 }
 
-// Initialize Mini Game
+
 let antiCheat = null;
 let leaderboardService = null;
 
 function initGame() {
     try {
         game = new MiniGame();
-        // Game will be initialized with API once API is ready
+        
         console.log('✅ Mini Game initialized');
         
-        // Initialize anti-cheat system
+        
         if (typeof AntiCheat !== 'undefined') {
             antiCheat = new AntiCheat();
             console.log('✅ Anti-Cheat system initialized');
         }
         
-        // Initialize leaderboard service
-        if (typeof LeaderboardService !== 'undefined') {
-            leaderboardService = new LeaderboardService();
-            console.log('✅ Leaderboard service initialized');
+        if (typeof LeaderboardSheets !== 'undefined' && typeof CONFIG !== 'undefined') {
+            const sheetId = CONFIG.GOOGLE_SHEETS.SHEET_ID;
+            const apiKey = CONFIG.GOOGLE_SHEETS.API_KEY;
+            if (sheetId && apiKey && sheetId !== 'YOUR_GOOGLE_SHEET_ID' && apiKey !== 'YOUR_GOOGLE_SHEETS_API_KEY') {
+                leaderboardService = new LeaderboardSheets(sheetId, apiKey);
+            }
         }
         
-        // Setup game UI
+        
         const startBtn = document.getElementById('start-game-btn');
         const gameArea = document.getElementById('game-area');
         const gameStatus = document.getElementById('game-status');
@@ -201,29 +199,29 @@ function initGame() {
             });
         }
         
-        // Setup background click handler (lose 1 life)
+        
         if (gameArea) {
             gameArea.addEventListener('click', (e) => {
-                // Only trigger if clicking directly on game area background (not on targets)
+                
                 if (game && game.isPlaying) {
-                    // Check if click was on a target or target's child elements
+                    
                     const clickedTarget = e.target.closest('.game-target');
                     if (!clickedTarget && e.target === gameArea) {
-                        // Clicked on background, not a target
+                        
                         handleBackgroundClick(e);
                     }
                 }
-            }, true); // Use capture phase to catch clicks before targets
+            }, true); 
         }
         
-        // Update game stats periodically
+        
         setInterval(() => {
             if (game && game.isPlaying) {
                 updateGameUI();
             }
         }, 100);
         
-        // Load leaderboard after a delay
+        
         setTimeout(() => {
             if (typeof loadLeaderboard === 'function') {
                 loadLeaderboard();
@@ -235,24 +233,24 @@ function initGame() {
     }
 }
 
-// Handle background click (lose 1 life)
+
 function handleBackgroundClick(e) {
     if (!game || !game.isPlaying) return;
     
-    // Check if clicked element is actually the game area (not a target)
+    
     if (e.target.classList.contains('game-target') || 
         e.target.closest('.game-target')) {
-        return; // Clicked on a target, not background
+        return; 
     }
     
-    // Lose 1 life
+    
     game.missedTargets++;
     game.missTarget();
     
-    // Show feedback
+    
     showGameStatus('Missed! -1 Life', 'error');
     
-    // Visual feedback
+    
     const gameArea = document.getElementById('game-area');
     if (gameArea) {
         gameArea.style.backgroundColor = 'rgba(255, 68, 68, 0.2)';
@@ -261,12 +259,12 @@ function handleBackgroundClick(e) {
         }, 200);
     }
     
-    // Check if game should end
+    
     checkGameEnd();
     updateGameUI();
 }
 
-// Start Game
+
 async function startGame() {
     const startBtn = document.getElementById('start-game-btn');
     const gameStatus = document.getElementById('game-status');
@@ -288,17 +286,17 @@ async function startGame() {
         startBtn.textContent = 'Processing Payment...';
         showGameStatus('Processing payment of 0.01 SOL...', 'info');
         
-        // Initialize API with bridge if not already done
+        
         if (!api.bridge) {
             api.init(bridge);
         }
         
-        // Initialize game with API if not already done
+        
         if (!game.api) {
             game.init(api);
         }
         
-        // Start the game (this will process payment)
+        
         const result = await game.startGame();
         
         if (result.success) {
@@ -307,12 +305,12 @@ async function startGame() {
                 : '✅ Admin access granted! Game starting...';
             showGameStatus(paymentMsg, 'success');
             
-            // Reset anti-cheat for new game
+            
             if (antiCheat) {
                 antiCheat.reset();
             }
             
-            // Hide start screen immediately
+            
             if (startScreen) {
                 startScreen.classList.add('hidden');
                 startScreen.style.display = 'none';
@@ -321,20 +319,20 @@ async function startGame() {
                 startScreen.style.pointerEvents = 'none';
             }
             
-            // Ensure game area is visible
+            
             if (gameArea) {
                 gameArea.style.display = 'block';
                 gameArea.style.visibility = 'visible';
             }
             
-            // Start game loop
+            
             startGameLoop();
             
-            // Update button
+            
             startBtn.textContent = 'Game In Progress...';
             startBtn.disabled = true;
             
-            // Force UI update
+            
             updateGameUI();
         }
     } catch (error) {
@@ -345,22 +343,22 @@ async function startGame() {
     }
 }
 
-// Start Game Loop
-let targetTimeouts = []; // Track all target timeouts
+
+let targetTimeouts = []; 
 
 function startGameLoop() {
     const gameArea = document.getElementById('game-area');
     
-    // Clear any existing intervals/timeouts
+    
     if (gameInterval) clearInterval(gameInterval);
     targetTimeouts.forEach(timeout => clearTimeout(timeout));
     targetTimeouts = [];
     
-    // Clear all existing targets
+    
     const existingTargets = gameArea.querySelectorAll('.game-target');
     existingTargets.forEach(target => target.remove());
     
-    // Create targets periodically (faster as score increases)
+    
     gameInterval = setInterval(() => {
         if (!game || !game.isPlaying) {
             clearInterval(gameInterval);
@@ -370,13 +368,13 @@ function startGameLoop() {
         }
         
         createGameTarget();
-    }, 1200); // New target every 1.2 seconds
+    }, 1200); 
     
-    // Create first target immediately
+    
     setTimeout(() => createGameTarget(), 300);
 }
 
-// Create Game Target
+
 function createGameTarget() {
     if (!game || !game.isPlaying) {
         console.log('Game not playing, skipping target creation');
@@ -389,11 +387,11 @@ function createGameTarget() {
         return;
     }
     
-    // Ensure game area is visible
+    
     gameArea.style.display = 'block';
     gameArea.style.visibility = 'visible';
     
-    // Ensure start screen is hidden
+    
     const startScreen = document.getElementById('game-start-screen');
     if (startScreen) {
         startScreen.classList.add('hidden');
@@ -408,14 +406,14 @@ function createGameTarget() {
     
     const target = game.createTarget(gameAreaWidth, gameAreaHeight);
     
-    // Ensure target stays within bounds
+    
     const maxX = Math.max(0, gameAreaWidth - target.size);
     const maxY = Math.max(0, gameAreaHeight - target.size);
     
     const finalX = Math.min(Math.max(0, target.x), maxX);
     const finalY = Math.min(Math.max(0, target.y), maxY);
     
-    // Create target element
+    
     const targetEl = document.createElement('div');
     targetEl.className = 'game-target';
     targetEl.style.left = finalX + 'px';
@@ -433,13 +431,13 @@ function createGameTarget() {
     
     console.log(`Creating target at (${finalX}, ${finalY}) with size ${target.size}px`);
     
-    // Add click handler
+    
     targetEl.addEventListener('click', (e) => {
         e.stopPropagation();
         hitTarget(target.id, targetEl);
     });
     
-    // Add visual countdown indicator
+    
     const countdownBar = document.createElement('div');
     countdownBar.className = 'target-countdown';
     countdownBar.style.width = '100%';
@@ -447,13 +445,13 @@ function createGameTarget() {
     
     gameArea.appendChild(targetEl);
     
-    // Animate countdown bar
+    
     countdownBar.style.transition = `width ${target.lifetime}ms linear`;
     setTimeout(() => {
         countdownBar.style.width = '0%';
     }, 10);
     
-    // Remove target after lifetime expires if not clicked
+    
     const timeoutId = setTimeout(() => {
         if (targetEl.parentElement) {
             targetEl.classList.add('missed');
@@ -469,25 +467,25 @@ function createGameTarget() {
                 }
             }, 200);
         }
-        // Remove from timeouts array
+        
         const index = targetTimeouts.indexOf(timeoutId);
         if (index > -1) {
             targetTimeouts.splice(index, 1);
         }
     }, target.lifetime);
     
-    // Store timeout ID on target element for easy cleanup
+    
     targetEl.setAttribute('data-timeout-id', timeoutId.toString());
     targetTimeouts.push(timeoutId);
 }
 
-// Hit Target
+
 function hitTarget(targetId, targetEl) {
     if (!game || !game.isPlaying) return;
     
     const result = game.hitTarget(targetId);
     if (result && result.hit) {
-        // Find and clear timeout for this specific target
+        
         const timeoutAttr = targetEl.getAttribute('data-timeout-id');
         if (timeoutAttr) {
             const timeoutId = parseInt(timeoutAttr);
@@ -498,17 +496,17 @@ function hitTarget(targetId, targetEl) {
             }
         }
         
-        // Animate hit with explosion effect
+        
         targetEl.classList.add('hit');
         targetEl.style.background = `radial-gradient(circle, ${result.target.color} 0%, transparent 70%)`;
         
-        // Show points popup with bonus info
+        
         showPointsPopup(result.points, result.bonus, targetEl);
         
-        // Play hit sound effect (visual feedback)
+        
         createHitEffect(targetEl);
         
-        // Remove target
+        
         setTimeout(() => {
             if (targetEl.parentElement) {
                 targetEl.remove();
@@ -519,7 +517,7 @@ function hitTarget(targetId, targetEl) {
     }
 }
 
-// Create hit effect
+
 function createHitEffect(targetEl) {
     const effect = document.createElement('div');
     effect.className = 'hit-effect';
@@ -541,7 +539,7 @@ function createHitEffect(targetEl) {
     }, 600);
 }
 
-// Show Points Popup
+
 function showPointsPopup(points, bonus, targetEl) {
     const gameArea = document.getElementById('game-area');
     if (!gameArea) return;
@@ -574,7 +572,7 @@ function showPointsPopup(points, bonus, targetEl) {
     }, 1200);
 }
 
-// Check Game End
+
 function checkGameEnd() {
     if (!game || !game.isPlaying) return;
     
@@ -586,7 +584,7 @@ function checkGameEnd() {
     }
 }
 
-// End Game
+
 async function endGame() {
     if (!game) return;
     
@@ -596,30 +594,35 @@ async function endGame() {
     const startScreen = document.getElementById('game-start-screen');
     const gameArea = document.getElementById('game-area');
     
-    // Don't submit score if cheating was detected
+    
     if (antiCheat && antiCheat.isCheating) {
         showGameStatus('Score not submitted due to cheating detection', 'error');
     } else {
-        // Submit score to leaderboard
+        
         if (leaderboardService && bridge && bridge.solanaWallet) {
             try {
                 const signature = result.paymentSignature || 'admin-' + Date.now();
                 const difficulty = Math.min(1 + Math.floor(result.score / 100), 5);
-                await leaderboardService.submitScore(
+                const submitResult = await leaderboardService.submitScore(
                     bridge.solanaWallet,
                     result.score,
                     result.duration,
                     signature,
                     difficulty
                 );
-                showGameStatus('Score submitted to leaderboard!', 'success');
+                if (submitResult && submitResult.success) {
+                    showGameStatus('Score submitted to leaderboard!', 'success');
+                } else {
+                    showGameStatus('Score saved locally (leaderboard unavailable)', 'info');
+                }
             } catch (error) {
                 console.error('Failed to submit score:', error);
+                showGameStatus('Score saved locally', 'info');
             }
         }
     }
     
-    // Clear intervals and timeouts
+    
     if (gameInterval) {
         clearInterval(gameInterval);
         gameInterval = null;
@@ -627,7 +630,7 @@ async function endGame() {
     targetTimeouts.forEach(timeout => clearTimeout(timeout));
     targetTimeouts = [];
     
-    // Remove all targets with fade out
+    
     const targets = gameArea.querySelectorAll('.game-target');
     targets.forEach((target, index) => {
         setTimeout(() => {
@@ -641,7 +644,7 @@ async function endGame() {
         }, index * 50);
     });
     
-    // Calculate performance rating
+    
     const scorePerSecond = result.duration > 0 ? (result.score / (result.duration / 1000)).toFixed(1) : 0;
     let rating = 'Good';
     if (scorePerSecond > 50) rating = 'Excellent!';
@@ -649,7 +652,7 @@ async function endGame() {
     else if (scorePerSecond > 15) rating = 'Good';
     else rating = 'Keep Trying!';
     
-    // Get leaderboard position
+    
     let leaderboardInfo = '';
     if (leaderboardService && bridge && bridge.solanaWallet) {
         try {
@@ -660,11 +663,11 @@ async function endGame() {
                 </p>`;
             }
         } catch (error) {
-            // Ignore leaderboard errors
+            
         }
     }
     
-    // Show game over screen
+    
     if (startScreen) {
         startScreen.classList.remove('hidden');
         startScreen.style.display = 'block';
@@ -691,23 +694,23 @@ async function endGame() {
         `;
     }
     
-    // Update button
+    
     if (startBtn) {
         startBtn.disabled = false;
         startBtn.textContent = 'Pay 0.01 SOL & Start Game';
     }
     
-    // Show final status
+    
     showGameStatus(`Game Over! Final Score: ${result.score} (${scorePerSecond} pts/sec)`, 'info');
     
-    // Reset UI
+    
     updateGameUI();
     
-    // Load and display leaderboard
+    
     await loadLeaderboard();
 }
 
-// Update Game UI
+
 function updateGameUI() {
     if (!game) return;
     
@@ -722,7 +725,7 @@ function updateGameUI() {
     
     if (livesEl) {
         livesEl.textContent = stats.remainingLives;
-        // Change color based on lives
+        
         if (stats.remainingLives <= 1) {
             livesEl.style.color = 'var(--accent-error)';
         } else if (stats.remainingLives <= 2) {
@@ -738,7 +741,7 @@ function updateGameUI() {
     }
 }
 
-// Load Leaderboard
+
 async function loadLeaderboard() {
     if (!leaderboardService) {
         const container = document.getElementById('leaderboard-container');
@@ -773,7 +776,7 @@ async function loadLeaderboard() {
     }
 }
 
-// Show Game Status
+
 function showGameStatus(message, type = 'info') {
     const gameStatus = document.getElementById('game-status');
     if (gameStatus) {
@@ -788,9 +791,9 @@ function showGameStatus(message, type = 'info') {
     }
 }
 
-// Initialize Test Suite
+
 function initTestSuite() {
-    // Add test button to console for easy access
+    
     window.runBridgeTests = async function(iterations = 1000) {
         if (!bridge) {
             console.error('Bridge not initialized');
@@ -801,7 +804,7 @@ function initTestSuite() {
         const testSuite = new BridgeTestSuite(bridge);
         const results = await testSuite.runFullTestSuite(iterations);
         
-        // Display results in UI if possible
+        
         if (typeof showBridgeStatus === 'function') {
             const passRate = ((results.passed / results.totalTests) * 100).toFixed(2);
             showBridgeStatus(
@@ -818,7 +821,7 @@ function initTestSuite() {
     console.log('%cRun: runAPITests(N) to test API N times', 'color: #8b949e; font-size: 12px;');
     console.log('%cOr use the "Run Stress Test" button on the page', 'color: #8b949e; font-size: 12px;');
     
-    // API Test Function - Run tests and retry until success
+    
     window.runAPITests = async function(iterations = 700) {
         if (!api) {
             console.error('API not initialized. Please wait for bridge to initialize.');
@@ -842,7 +845,7 @@ function initTestSuite() {
             const rpcErrorRate = ((results.rpcErrors / results.totalTests) * 100).toFixed(2);
             const passRate = ((results.passed / results.totalTests) * 100).toFixed(2);
             
-            // Success criteria: RPC errors < 50% AND API failures = 0
+            
             const isSuccess = parseFloat(rpcErrorRate) < 50 && results.failed === 0;
             
             if (isSuccess) {
@@ -859,7 +862,7 @@ function initTestSuite() {
                 
                 if (results.failed > 0) {
                     console.log(`\nAnalyzing errors to improve API...`);
-                    // Analyze errors and try to fix common issues
+                    
                     const errorTypes = {};
                     results.errors.forEach(err => {
                         errorTypes[err.type] = (errorTypes[err.type] || 0) + 1;
@@ -869,7 +872,7 @@ function initTestSuite() {
                 
                 attempt++;
                 console.log(`\nRetrying test suite (attempt ${attempt})...`);
-                // Small delay before retry
+                
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
@@ -877,21 +880,14 @@ function initTestSuite() {
         return results;
     };
     
-    // Auto-run API tests after initialization (optional - can be disabled)
-    // Uncomment the following to auto-test on page load:
-    /*
-    setTimeout(async () => {
-        if (api && api.bridge) {
-            console.log('Auto-running API tests...');
-            await runAPITests(100);
-        }
-    }, 3000);
-    */
     
-    // Add test button to UI
+    
+    
+    
+    
     const testBtn = document.getElementById('run-tests-btn');
     
-    // Stress test button (customizable, no limits)
+    
     if (testBtn) {
         testBtn.addEventListener('click', async () => {
             const iterations = prompt('How many tests to run? (No limits - enter any number)', '10000');
@@ -906,7 +902,7 @@ function initTestSuite() {
         });
     }
     
-    // Unified test runner function
+    
     async function runTestsWithUI(testCount, buttonElement) {
         if (!bridge) {
             alert('Bridge not initialized. Please wait...');
@@ -922,12 +918,12 @@ function initTestSuite() {
         buttonElement.disabled = true;
         buttonElement.textContent = `Testing ${testCount.toLocaleString()}...`;
         
-        // Disable test button during test
+        
         if (testBtn) {
             testBtn.disabled = true;
         }
         
-        // Create progress indicator
+        
         const progressDiv = document.createElement('div');
         progressDiv.id = 'test-progress';
         progressDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-tertiary);padding:2rem;border:2px solid var(--accent-primary);border-radius:8px;z-index:10001;font-family:var(--font-mono);min-width:400px;max-width:90vw;';
@@ -958,7 +954,7 @@ function initTestSuite() {
         let originalLog = null;
         let progressHandler = null;
         
-        // Make cancel function available globally
+        
         window.cancelTest = function() {
             window.testCancelled = true;
             testCancelled = true;
@@ -970,7 +966,7 @@ function initTestSuite() {
             console.log('Test cancellation requested...');
         };
         
-        // Update progress function
+        
         const updateProgress = (current, total, passed, failed) => {
             const percent = total > 0 ? ((current / total) * 100).toFixed(1) : 0;
             const progressBar = document.getElementById('test-progress-bar');
@@ -986,7 +982,7 @@ function initTestSuite() {
             if (passedEl) passedEl.textContent = passed.toLocaleString();
             if (failedEl) failedEl.textContent = failed.toLocaleString();
             
-            // Calculate speed
+            
             const elapsed = (Date.now() - startTime) / 1000;
             if (elapsed > 0 && current > lastUpdate) {
                 const speed = ((current - lastUpdate) / ((Date.now() - lastUpdate) / 1000)).toFixed(0);
@@ -996,7 +992,7 @@ function initTestSuite() {
         };
         
         try {
-            // Listen for test progress events
+            
             progressHandler = (event) => {
                 const { current, total, passed, failed, elapsed, rate } = event.detail;
                 updateProgress(current, total, passed, failed);
@@ -1005,7 +1001,7 @@ function initTestSuite() {
             };
             window.addEventListener('testProgress', progressHandler);
             
-            // Override console.log temporarily to show progress
+            
             originalLog = console.log;
             console.log = function(...args) {
                 if (args[0] && typeof args[0] === 'string') {
@@ -1019,24 +1015,24 @@ function initTestSuite() {
                 originalLog.apply(console, args);
             };
             
-            // Initialize cancellation flag
+            
             window.testCancelled = false;
             
-            // Run tests (NO LIMITS!)
+            
             const results = await runBridgeTests(testCount);
             
-            // Remove progress event listener
+            
             window.removeEventListener('testProgress', progressHandler);
             
-            // Restore console.log
+            
             console.log = originalLog;
             
-            // Calculate final stats
+            
             const duration = ((Date.now() - startTime) / 1000).toFixed(2);
             const testsPerSec = (testCount / (duration / 1000)).toFixed(0);
             const passRate = ((results.passed / results.totalTests) * 100).toFixed(2);
             
-            // Show results
+            
             progressDiv.innerHTML = `
                 <div style="text-align:center;color:var(--text-primary);">
                     <div style="font-size:1.5rem;margin-bottom:1rem;">Tests Complete</div>
@@ -1061,12 +1057,12 @@ function initTestSuite() {
                 </div>
             `;
             
-            // Update button
+            
             buttonElement.textContent = `Complete: ${results.passed.toLocaleString()}/${results.totalTests.toLocaleString()}`;
             setTimeout(() => {
                 buttonElement.textContent = originalButtonText;
                 buttonElement.disabled = false;
-                // Re-enable test button
+                
                 if (testBtn) {
                     testBtn.disabled = false;
                 }
@@ -1075,24 +1071,24 @@ function initTestSuite() {
                 }
             }, 10000);
         } catch (error) {
-            // Restore console.log
+            
             if (typeof originalLog !== 'undefined') {
                 console.log = originalLog;
             }
             
-            // Remove progress event listener if it exists
+            
             if (typeof progressHandler !== 'undefined') {
                 window.removeEventListener('testProgress', progressHandler);
             }
             
             buttonElement.textContent = 'Test Failed';
             buttonElement.disabled = false;
-            // Re-enable test button
+            
             if (testBtn) {
                 testBtn.disabled = false;
             }
             
-            // Check if cancelled
+            
             if (testCancelled || window.testCancelled) {
                 if (progressDiv.parentElement) {
                     progressDiv.innerHTML = `
@@ -1122,14 +1118,14 @@ function initTestSuite() {
                 }
             }
         } finally {
-            // Clean up cancellation flag
+            
             window.testCancelled = false;
             testCancelled = false;
         }
     }
 }
 
-// Initialize Wallet Modals
+
 function initWalletModals() {
     const modal = document.getElementById('wallet-modal');
     const modalClose = document.getElementById('modal-close');
@@ -1138,14 +1134,14 @@ function initWalletModals() {
     const viewNFTsBtn = document.getElementById('view-nfts-btn');
     const viewHistoryBtn = document.getElementById('view-history-btn');
     
-    // Close modal
+    
     if (modalClose) {
         modalClose.addEventListener('click', () => {
             modal.style.display = 'none';
         });
     }
     
-    // Close on background click
+    
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -1154,28 +1150,28 @@ function initWalletModals() {
         });
     }
     
-    // Portfolio button
+    
     if (viewPortfolioBtn) {
         viewPortfolioBtn.addEventListener('click', async () => {
             await showPortfolioModal();
         });
     }
     
-    // Tokens button
+    
     if (viewTokensBtn) {
         viewTokensBtn.addEventListener('click', async () => {
             await showTokensModal();
         });
     }
     
-    // NFTs button
+    
     if (viewNFTsBtn) {
         viewNFTsBtn.addEventListener('click', async () => {
             await showNFTsModal();
         });
     }
     
-    // History button
+    
     if (viewHistoryBtn) {
         viewHistoryBtn.addEventListener('click', async () => {
             await showHistoryModal();
@@ -1183,7 +1179,7 @@ function initWalletModals() {
     }
 }
 
-// Show Portfolio Modal
+
 async function showPortfolioModal() {
     const modal = document.getElementById('wallet-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -1248,7 +1244,7 @@ async function showPortfolioModal() {
     }
 }
 
-// Show Tokens Modal
+
 async function showTokensModal() {
     const modal = document.getElementById('wallet-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -1301,7 +1297,7 @@ async function showTokensModal() {
     }
 }
 
-// Show NFTs Modal
+
 async function showNFTsModal() {
     const modal = document.getElementById('wallet-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -1340,7 +1336,7 @@ async function showNFTsModal() {
     }
 }
 
-// Show History Modal
+
 async function showHistoryModal() {
     const modal = document.getElementById('wallet-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -1385,17 +1381,17 @@ async function showHistoryModal() {
     }
 }
 
-// Connect Solana Wallet - REAL MODE
+
 async function connectWallet() {
     if (!bridge) {
         throw new Error('Bridge not initialized');
     }
     
-    // Check if Phantom wallet is installed
+    
     if (typeof window === 'undefined' || !window.solana || !window.solana.isPhantom) {
         showBridgeStatus('⚠️ Phantom wallet not detected! Install Phantom to use REAL MODE.', 'error');
         showBridgeStatus('You can still use demo mode for testing.', 'info');
-        // Enable demo mode
+        
         bridge.solanaWallet = null;
         document.getElementById('connect-wallet-btn').textContent = '⚠️ Install Phantom';
         document.getElementById('connect-wallet-btn').style.background = 'var(--accent-warning)';
@@ -1408,13 +1404,13 @@ async function connectWallet() {
         
         const address = await bridge.connectSolanaWallet();
         
-        // Update UI - Show wallet card
+        
         document.getElementById('connect-wallet-btn').style.display = 'none';
         document.getElementById('bridge-btn').style.display = 'inline-block';
         document.getElementById('use-wallet-btn').style.display = 'inline-block';
         document.getElementById('wallet-status').style.display = 'block';
         
-        // Update wallet info
+        
         const addressEl = document.getElementById('solana-address');
         if (addressEl) {
             addressEl.textContent = address.substring(0, 4) + '...' + address.substring(address.length - 4);
@@ -1423,18 +1419,18 @@ async function connectWallet() {
             addressEl.onclick = () => copyToClipboard(address);
         }
         
-        // Update wallet avatar with first 2 chars
+        
         const avatarEl = document.getElementById('wallet-avatar');
         if (avatarEl) {
             avatarEl.textContent = address.substring(0, 2).toUpperCase();
         }
         
-        // Update balance and stats
+        
         await updateBalances();
         
         showBridgeStatus('✅ Wallet connected! REAL MODE activated.', 'success');
         
-        // Auto-refresh wallet data every 10 seconds
+        
         setInterval(async () => {
             if (bridge.solanaWallet) {
                 await updateBalances();
@@ -1445,13 +1441,13 @@ async function connectWallet() {
         console.error('Wallet connection error:', error);
         showBridgeStatus('❌ Failed to connect: ' + error.message, 'error');
         showBridgeStatus('Falling back to demo mode...', 'info');
-        // Fallback to demo mode
+        
         bridge.solanaWallet = null;
         document.getElementById('connect-wallet-btn').textContent = 'Retry Connection';
     }
 }
 
-// Update balances and wallet info
+
 async function updateBalances() {
     if (!bridge) return;
     
@@ -1462,13 +1458,13 @@ async function updateBalances() {
                 const solPrice = await bridge.getSOLPrice();
                 const usdValue = solBalance * solPrice;
                 
-                // Update main balance display
+                
                 document.getElementById('total-balance').textContent = solBalance.toFixed(4) + ' SOL';
                 document.getElementById('balance-usd').textContent = '$' + usdValue.toFixed(2);
                 document.getElementById('solana-balance').textContent = solBalance.toFixed(4) + ' SOL';
                 document.getElementById('solana-balance-display').textContent = solBalance.toFixed(4) + ' SOL';
                 
-                // Update wallet address
+                
                 const addressEl = document.getElementById('solana-address');
                 if (addressEl) {
                     addressEl.textContent = bridge.solanaWallet.substring(0, 4) + '...' + bridge.solanaWallet.substring(bridge.solanaWallet.length - 4);
@@ -1476,7 +1472,7 @@ async function updateBalances() {
                     addressEl.onclick = () => copyToClipboard(bridge.solanaWallet);
                 }
                 
-                // Update wallet stats
+                
                 await updateWalletStats();
             } catch (error) {
                 console.error('Error updating Solana balance:', error);
@@ -1501,20 +1497,20 @@ async function updateBalances() {
     }
 }
 
-// Update wallet statistics
+
 async function updateWalletStats() {
     if (!bridge || !bridge.solanaWallet) return;
     
     try {
-        // Get token accounts
+        
         const tokens = await bridge.getSolanaTokenAccounts();
         document.getElementById('token-count').textContent = tokens.length;
         
-        // Get NFTs (placeholder for now)
+        
         const nfts = await bridge.getSolanaNFTs();
         document.getElementById('nft-count').textContent = nfts.length;
         
-        // Get transaction count
+        
         const txs = await bridge.getSolanaTransactions(100);
         document.getElementById('tx-count').textContent = txs.length;
     } catch (error) {
@@ -1522,7 +1518,7 @@ async function updateWalletStats() {
     }
 }
 
-// Copy to clipboard
+
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         showBridgeStatus('Address copied to clipboard!', 'success');
@@ -1531,7 +1527,7 @@ function copyToClipboard(text) {
     });
 }
 
-// Check if bridge is ready to execute
+
 function checkBridgeReady() {
     const amount = parseFloat(document.getElementById('zcash-amount').value);
     const recipient = document.getElementById('solana-recipient').value.trim();
@@ -1544,7 +1540,7 @@ function checkBridgeReady() {
     }
 }
 
-// Execute Bridge Transaction
+
 async function executeBridge() {
     if (!bridge) {
         showBridgeStatus('Bridge not initialized', 'error');
@@ -1571,7 +1567,7 @@ async function executeBridge() {
     try {
         showBridgeStatus('Initiating bridge transaction...', 'info');
         
-        // Make showBridgeStatus available to bridge service
+        
         window.showBridgeStatus = showBridgeStatus;
         
         const result = await bridge.bridgeZecToSolana(amount, recipient);
@@ -1581,11 +1577,11 @@ async function executeBridge() {
             'success'
         );
         
-        // Clear form
+        
         document.getElementById('zcash-amount').value = '';
         document.getElementById('solana-recipient').value = '';
         
-        // Update balances and stats
+        
         await updateBalances();
         updatePoolStats();
         updateTransactionList();
@@ -1600,28 +1596,28 @@ async function executeBridge() {
     }
 }
 
-// Update Pool Statistics
+
 function updatePoolStats() {
     if (!bridge) return;
     
     try {
         const stats = bridge.getPoolStats();
         
-        // Update transaction count
+        
         const txElement = document.getElementById('stat-transactions');
         if (txElement) {
             txElement.dataset.target = stats.totalTransactions;
             animateValue(txElement, parseInt(txElement.textContent) || 0, stats.totalTransactions, 1000);
         }
         
-        // Update active users
+        
         const usersElement = document.getElementById('stat-users');
         if (usersElement) {
             usersElement.dataset.target = stats.activeUsers;
             animateValue(usersElement, parseInt(usersElement.textContent) || 0, stats.activeUsers, 1000);
         }
         
-        // Update pool balance
+        
         const balanceElement = document.getElementById('stat-pool-balance');
         if (balanceElement) {
             balanceElement.dataset.target = stats.poolBalance;
@@ -1633,7 +1629,7 @@ function updatePoolStats() {
     }
 }
 
-// Animate value (for stats)
+
 function animateValue(element, start, end, duration, isFloat = false) {
     let startTimestamp = null;
     const step = (timestamp) => {
@@ -1660,7 +1656,7 @@ function animateValue(element, start, end, duration, isFloat = false) {
     window.requestAnimationFrame(step);
 }
 
-// Update Transaction List
+
 function updateTransactionList() {
     if (!bridge) return;
     
@@ -1698,7 +1694,7 @@ function updateTransactionList() {
     }).join('');
 }
 
-// Show Bridge Status
+
 function showBridgeStatus(message, type = 'info') {
     const statusEl = document.getElementById('bridge-status');
     if (!statusEl) return;
@@ -1714,7 +1710,7 @@ function showBridgeStatus(message, type = 'info') {
     }
 }
 
-// Initialize Checker UI
+
 function initCheckerUI() {
     const checkTxBtn = document.getElementById('check-tx-btn');
     const checkPoolBtn = document.getElementById('check-pool-btn');
@@ -1737,7 +1733,7 @@ function initCheckerUI() {
         });
     }
     
-    // Allow Enter key to trigger check
+    
     if (checkTxidInput) {
         checkTxidInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -1747,7 +1743,7 @@ function initCheckerUI() {
     }
 }
 
-// Check Transaction
+
 async function checkTransaction(txid) {
     if (!bridge) {
         showCheckerResults('Bridge not initialized', 'error');
@@ -1773,7 +1769,7 @@ async function checkTransaction(txid) {
     }
 }
 
-// Check Pool Integrity
+
 async function checkPoolIntegrity() {
     if (!bridge) {
         showCheckerResults('Bridge not initialized', 'error');
@@ -1799,7 +1795,7 @@ async function checkPoolIntegrity() {
     }
 }
 
-// Display Check Results
+
 function displayCheckResults(result) {
     const resultsEl = document.getElementById('checker-results');
     if (!resultsEl) return;
@@ -1892,7 +1888,7 @@ function displayCheckResults(result) {
     resultsEl.style.display = 'block';
 }
 
-// Display Pool Integrity Report
+
 function displayPoolIntegrityReport(report) {
     const resultsEl = document.getElementById('checker-results');
     if (!resultsEl) return;
@@ -1909,7 +1905,7 @@ function displayPoolIntegrityReport(report) {
             <div class="check-details">
     `;
     
-    // Balance check
+    
     if (report.checks.balance) {
         const balance = report.checks.balance;
         html += `
@@ -1935,7 +1931,7 @@ function displayPoolIntegrityReport(report) {
         `;
     }
     
-    // Transaction consistency
+    
     if (report.checks.transactions) {
         const tx = report.checks.transactions;
         html += `
@@ -1953,7 +1949,7 @@ function displayPoolIntegrityReport(report) {
         `;
     }
     
-    // Chain synchronization
+    
     if (report.checks.synchronization) {
         const sync = report.checks.synchronization;
         html += `
@@ -1971,7 +1967,7 @@ function displayPoolIntegrityReport(report) {
         `;
     }
     
-    // Proofs check
+    
     if (report.checks.proofs) {
         const proofs = report.checks.proofs;
         html += `
@@ -2017,7 +2013,7 @@ function displayPoolIntegrityReport(report) {
     resultsEl.style.display = 'block';
 }
 
-// Show Checker Results
+
 function showCheckerResults(message, type = 'info') {
     const resultsEl = document.getElementById('checker-results');
     if (!resultsEl) return;
@@ -2026,7 +2022,7 @@ function showCheckerResults(message, type = 'info') {
     resultsEl.style.display = 'block';
 }
 
-// Terminal Animation
+
 function initTerminalAnimation() {
     const terminal = document.getElementById('hero-terminal');
     if (!terminal) return;
@@ -2041,7 +2037,7 @@ function initTerminalAnimation() {
         { text: '$', type: 'prompt', delay: 5500 }
     ];
 
-    // Clear initial content
+    
     terminalBody.innerHTML = '';
 
     lines.forEach((line, index) => {
@@ -2064,7 +2060,7 @@ function initTerminalAnimation() {
     });
 }
 
-// Scroll Animations
+
 function initScrollAnimations() {
     const observerOptions = {
         threshold: 0.1,
@@ -2079,38 +2075,38 @@ function initScrollAnimations() {
         });
     }, observerOptions);
 
-    // Observe all sections
+    
     document.querySelectorAll('section').forEach(section => {
         section.classList.add('fade-in');
         observer.observe(section);
     });
 
-    // Observe flow steps
+    
     document.querySelectorAll('.flow-step').forEach(step => {
         step.classList.add('fade-in');
         observer.observe(step);
     });
 
-    // Observe proof cards
+    
     document.querySelectorAll('.proof-card').forEach(card => {
         card.classList.add('fade-in');
         observer.observe(card);
     });
 
-    // Observe feature items
+    
     document.querySelectorAll('.feature-item').forEach(item => {
         item.classList.add('fade-in');
         observer.observe(item);
     });
 }
 
-// Tab Switching (removed - no tabs needed for bash-only)
+
 function initTabSwitching() {
-    // Tabs removed - all examples are bash now
-    // Keep function for compatibility but no-op
+    
+    
 }
 
-// Copy Buttons
+
 function initCopyButtons() {
     const copyButtons = document.querySelectorAll('.copy-btn');
     
@@ -2123,7 +2119,7 @@ function initCopyButtons() {
                 try {
                     await navigator.clipboard.writeText(code.textContent);
                     
-                    // Visual feedback
+                    
                     const originalText = button.textContent;
                     button.textContent = 'Copied!';
                     button.style.background = 'var(--accent-success)';
@@ -2142,10 +2138,10 @@ function initCopyButtons() {
     });
 }
 
-// Stats Counter Animation (now uses real data from bridge)
+
 function initStatsCounter() {
-    // Stats are now updated by updatePoolStats() function
-    // This observer is kept for initial animation
+    
+    
     const stats = document.querySelectorAll('.stat-value');
     
     const observer = new IntersectionObserver((entries) => {
@@ -2189,7 +2185,7 @@ function initStatsCounter() {
     });
 }
 
-// Navbar Scroll Effect
+
 function initNavScroll() {
     const nav = document.getElementById('nav');
     let lastScroll = 0;
@@ -2208,7 +2204,7 @@ function initNavScroll() {
         lastScroll = currentScroll;
     });
 
-    // Smooth scroll for anchor links
+    
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -2224,7 +2220,7 @@ function initNavScroll() {
     });
 }
 
-// Flow Steps Animation
+
 function initFlowSteps() {
     const flowSteps = document.querySelectorAll('.flow-step');
     
@@ -2247,7 +2243,7 @@ function initFlowSteps() {
     });
 }
 
-// Terminal Window Hover Effect
+
 document.querySelectorAll('.terminal-window').forEach(terminal => {
     terminal.addEventListener('mouseenter', () => {
         terminal.style.transform = 'scale(1.02)';
@@ -2259,39 +2255,39 @@ document.querySelectorAll('.terminal-window').forEach(terminal => {
     });
 });
 
-// Code Block Syntax Highlighting (enhanced)
+
 function highlightCode() {
     const codeBlocks = document.querySelectorAll('pre code');
     
     codeBlocks.forEach(block => {
-        // Skip if already highlighted
+        
         if (block.querySelector('.keyword')) return;
         
         let code = block.innerHTML || block.textContent;
         
-        // Preserve existing HTML if any
+        
         const isHTML = block.innerHTML !== block.textContent;
         if (!isHTML) {
             code = escapeHtml(code);
         }
         
-        // Highlight keywords
+        
         code = code.replace(/\b(async|await|function|const|let|var|if|else|for|while|return|import|from|export|class|interface|type|enum|fn|pub|use|async|await|def|async def)\b/g, 
             '<span style="color: var(--code-purple);">$&</span>');
         
-        // Highlight strings
+        
         code = code.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, 
             '<span style="color: var(--code-green);">$&</span>');
         
-        // Highlight functions/methods
+        
         code = code.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g, 
             '<span style="color: var(--code-blue);">$1</span>');
         
-        // Highlight comments
+        
         code = code.replace(/(\/\/.*$)/gm, 
             '<span style="color: var(--text-muted); font-style: italic;">$1</span>');
         
-        // Highlight numbers
+        
         code = code.replace(/\b(\d+\.?\d*)\b/g, 
             '<span style="color: var(--code-yellow);">$1</span>');
         
@@ -2299,7 +2295,7 @@ function highlightCode() {
     });
 }
 
-// Escape HTML to prevent XSS
+
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -2311,10 +2307,10 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Initialize code highlighting
+
 setTimeout(highlightCode, 100);
 
-// Add typing effect to terminal
+
 function typeText(element, text, speed = 50) {
     let i = 0;
     element.textContent = '';
@@ -2330,7 +2326,7 @@ function typeText(element, text, speed = 50) {
     type();
 }
 
-// Parallax effect for hero section
+
 let ticking = false;
 window.addEventListener('scroll', () => {
     if (!ticking) {
@@ -2346,7 +2342,7 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Add glow effect to buttons on hover
+
 document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
     button.addEventListener('mouseenter', function() {
         if (this.classList.contains('btn-primary')) {
@@ -2361,7 +2357,7 @@ document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
     });
 });
 
-// Add ripple effect to buttons
+
 document.querySelectorAll('button').forEach(button => {
     button.addEventListener('click', function(e) {
         const ripple = document.createElement('span');
@@ -2383,7 +2379,7 @@ document.querySelectorAll('button').forEach(button => {
     });
 });
 
-// Console log for debugging
+
 console.log('%cZCASH → SOLANA Protocol', 'color: #00d4ff; font-size: 20px; font-weight: bold;');
 console.log('%cPrivate Cross-Chain Payments', 'color: #00ff88; font-size: 14px;');
 console.log('%cBuilt with privacy in mind', 'color: #8b949e; font-size: 12px;');

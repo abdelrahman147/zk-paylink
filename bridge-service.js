@@ -1,25 +1,18 @@
-/**
- * ZCash → Solana Bridge Service
- * Handles cross-chain transactions with pool management
- */
+
 
 class ZcashSolanaBridge {
     constructor(config = {}) {
-        // Solana configuration with multiple RPC endpoints for failover
-        // QuickNode endpoint (primary) + public endpoints as fallback
+        
+        
         this.solanaRpcUrls = config.solanaRpcUrls || [
-            'https://prettiest-icy-sea.solana-mainnet.quiknode.pro/5426a8ab0b64bdfb1d9e9b7cdda36020b6c94669',
-            'https://api.mainnet-beta.solana.com',
-            'https://solana-api.projectserum.com',
-            'https://rpc.ankr.com/solana',
-            'https://solana.public-rpc.com',
-            'https://rpc.solana.com',
-            'https://solana-mainnet.g.alchemy.com/v2/demo'
+            'https:
+            'https:
+            'https:
         ];
-        // Rate limiting: track requests per endpoint
+        
         this.rpcRequestCounts = {};
-        this.rpcRateLimitWindow = 60000; // 1 minute window
-        this.maxRequestsPerWindow = 20; // Conservative limit
+        this.rpcRateLimitWindow = 60000; 
+        this.maxRequestsPerWindow = 20; 
         this.solanaRpcUrl = config.solanaRpcUrl || this.solanaRpcUrls[0];
         this.currentRpcIndex = 0;
         this.solanaConnection = null;
@@ -27,13 +20,13 @@ class ZcashSolanaBridge {
         this.bridgeProgramId = config.bridgeProgramId || null;
         this.poolAddress = config.poolAddress || null;
         
-        // Zcash configuration
-        this.zcashRpcUrl = config.zcashRpcUrl || 'http://localhost:8232';
+        
+        this.zcashRpcUrl = config.zcashRpcUrl || 'http:
         this.zcashRpcUser = config.zcashRpcUser || '';
         this.zcashRpcPassword = config.zcashRpcPassword || '';
         this.shieldedPoolAddress = config.shieldedPoolAddress || null;
         
-        // Pool state
+        
         this.poolState = {
             totalDeposits: 0,
             totalWithdrawals: 0,
@@ -43,7 +36,7 @@ class ZcashSolanaBridge {
             uniqueUsers: new Set()
         };
         
-        // Initialize asynchronously - don't block constructor
+        
         this.init().catch(error => {
             console.warn('Bridge initialization had errors (continuing anyway):', error.message);
         });
@@ -51,7 +44,7 @@ class ZcashSolanaBridge {
     
     async init() {
         try {
-            // Initialize Solana connection (always, even without wallet)
+            
             try {
                 await this.initSolanaConnection();
                 console.log('Solana connection initialized');
@@ -60,21 +53,21 @@ class ZcashSolanaBridge {
                 throw new Error('Solana connection required. Please check your network connection.');
             }
             
-            // Initialize Zcash connection
+            
             await this.initZcashConnection();
             
-            // Get pool address - silent RPC call, use placeholder if fails
+            
             if (!this.shieldedPoolAddress) {
                 const address = await this.getZcashShieldedAddress();
                 if (address) {
                     this.shieldedPoolAddress = address;
                 } else {
-                    // Silent fallback to placeholder
+                    
                     this.shieldedPoolAddress = 'zt1test' + Math.random().toString(36).substring(2, 15);
                 }
             }
             
-            // Try to connect wallet if available (optional)
+            
             if (typeof window !== 'undefined' && window.solana && window.solana.isPhantom) {
                 try {
                     await this.connectSolanaWallet();
@@ -83,10 +76,10 @@ class ZcashSolanaBridge {
                 }
             }
             
-            // Load pool state
+            
             await this.loadPoolState();
             
-            // Start monitoring
+            
             this.startMonitoring();
         } catch (error) {
             console.error('Bridge initialization error:', error);
@@ -94,7 +87,7 @@ class ZcashSolanaBridge {
         }
     }
     
-    // ============ Solana Integration ============
+    
     
     async connectSolanaWallet() {
         if (typeof window === 'undefined' || !window.solana) {
@@ -105,7 +98,7 @@ class ZcashSolanaBridge {
             const resp = await window.solana.connect();
             this.solanaWallet = resp.publicKey.toString();
             
-            // Initialize Solana Web3 connection using CDN
+            
             await this.loadSolanaWeb3();
             this.solanaConnection = new this.SolanaWeb3.Connection(this.solanaRpcUrl, 'confirmed');
             
@@ -119,7 +112,7 @@ class ZcashSolanaBridge {
     async loadSolanaWeb3() {
         if (this.SolanaWeb3) return;
         
-        // Load Solana Web3.js from CDN
+        
         return new Promise((resolve, reject) => {
             if (window.solanaWeb3) {
                 this.SolanaWeb3 = window.solanaWeb3;
@@ -128,7 +121,7 @@ class ZcashSolanaBridge {
             }
             
             const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.87.6/lib/index.iife.min.js';
+            script.src = 'https:
             script.onload = () => {
                 this.SolanaWeb3 = window.solanaWeb3;
                 resolve();
@@ -153,7 +146,7 @@ class ZcashSolanaBridge {
         await this.loadSolanaWeb3();
         const pubKey = address ? new this.SolanaWeb3.PublicKey(address) : new this.SolanaWeb3.PublicKey(this.solanaWallet);
         const balance = await this.solanaConnection.getBalance(pubKey);
-        return balance / 1e9; // Convert lamports to SOL
+        return balance / 1e9; 
     }
     
     async getSolanaTokenAccounts() {
@@ -204,14 +197,14 @@ class ZcashSolanaBridge {
     }
     
     async getSolanaNFTs() {
-        // In production, use Metaplex or other NFT indexing service
-        // For now, return empty array
+        
+        
         return [];
     }
     
     async getSOLPrice() {
         try {
-            const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+            const response = await fetch('https:
             const data = await response.json();
             return data.solana?.usd || 0;
         } catch (error) {
@@ -226,14 +219,14 @@ class ZcashSolanaBridge {
             return;
         }
         
-        // Try each RPC endpoint until one works
-        // Shuffle endpoints to distribute load
+        
+        
         const shuffledUrls = [...this.solanaRpcUrls].sort(() => Math.random() - 0.5);
         
         for (let i = 0; i < shuffledUrls.length; i++) {
             const rpcUrl = shuffledUrls[i];
             
-            // Check rate limit for this endpoint
+            
             if (this.isRateLimited(rpcUrl)) {
                 console.warn(`Solana RPC: Rate limit reached for ${rpcUrl}, skipping...`);
                 continue;
@@ -248,7 +241,7 @@ class ZcashSolanaBridge {
                 this.solanaRpcUrl = rpcUrl;
                 this.currentRpcIndex = this.solanaRpcUrls.indexOf(rpcUrl);
                 
-                // Test connection with longer timeout
+                
                 const slot = await Promise.race([
                     this.solanaConnection.getSlot(),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
@@ -264,12 +257,12 @@ class ZcashSolanaBridge {
                 console.error(`Solana RPC: Failed to connect to ${rpcUrl}: ${errorMsg}`);
                 this.solanaConnection = null;
                 
-                // If 403 error, mark endpoint as rate limited
+                
                 if (errorMsg.includes('403') || errorMsg.includes('forbidden') || errorMsg.includes('rate limit')) {
                     this.markRateLimited(rpcUrl);
                 }
                 
-                // Try next endpoint
+                
                 continue;
             }
         }
@@ -285,7 +278,7 @@ class ZcashSolanaBridge {
         const now = Date.now();
         const windowStart = now - this.rpcRateLimitWindow;
         
-        // Clean old entries
+        
         this.rpcRequestCounts[key] = this.rpcRequestCounts[key].filter(timestamp => timestamp > windowStart);
         
         return this.rpcRequestCounts[key].length >= this.maxRequestsPerWindow;
@@ -300,12 +293,12 @@ class ZcashSolanaBridge {
     }
     
     markRateLimited(rpcUrl) {
-        // Mark as rate limited by adding many timestamps
+        
         const key = rpcUrl;
         if (!this.rpcRequestCounts[key]) {
             this.rpcRequestCounts[key] = [];
         }
-        // Add timestamps to fill the window
+        
         const now = Date.now();
         for (let i = 0; i < this.maxRequestsPerWindow; i++) {
             this.rpcRequestCounts[key].push(now - (this.rpcRateLimitWindow * i / this.maxRequestsPerWindow));
@@ -313,7 +306,7 @@ class ZcashSolanaBridge {
     }
     
     async switchSolanaRpcEndpoint() {
-        // Switch to next RPC endpoint
+        
         this.currentRpcIndex = (this.currentRpcIndex + 1) % this.solanaRpcUrls.length;
         const newRpcUrl = this.solanaRpcUrls[this.currentRpcIndex];
         console.log(`Solana RPC: Switching to ${newRpcUrl}`);
@@ -321,17 +314,17 @@ class ZcashSolanaBridge {
     }
     
     async makeSolanaRpcCall(methodName, ...args) {
-        // Ensure connection exists
+        
         if (!this.solanaConnection) {
             await this.initSolanaConnection();
         }
         
-        // If still no connection, try to initialize again
+        
         if (!this.solanaConnection) {
             throw new Error('Solana RPC: No connection available');
         }
         
-        // Check rate limit before making request
+        
         if (this.isRateLimited(this.solanaRpcUrl)) {
             console.warn(`Solana RPC: Rate limit reached for ${this.solanaRpcUrl}, switching endpoint...`);
             await this.switchSolanaRpcEndpoint();
@@ -341,13 +334,13 @@ class ZcashSolanaBridge {
         }
         
         try {
-            // Record request
+            
             this.recordRpcRequest(this.solanaRpcUrl);
             
-            // Add small delay to avoid overwhelming endpoints
+            
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            // Execute operation
+            
             const method = this.solanaConnection[methodName];
             if (typeof method !== 'function') {
                 throw new Error(`Solana RPC: Method ${methodName} not found`);
@@ -357,7 +350,7 @@ class ZcashSolanaBridge {
         } catch (error) {
             const errorMsg = error.message || error.toString();
             
-            // If 403 error, switch endpoint and retry once
+            
             if (errorMsg.includes('403') || errorMsg.includes('forbidden') || errorMsg.includes('rate limit')) {
                 console.error(`Solana RPC: ${errorMsg} - switching endpoint...`);
                 this.markRateLimited(this.solanaRpcUrl);
@@ -380,10 +373,10 @@ class ZcashSolanaBridge {
         }
     }
     
-    // ============ Zcash Integration ============
+    
     
     async initZcashConnection() {
-        // Zcash RPC connection
+        
         this.zcashRpcAuth = btoa(`${this.zcashRpcUser}:${this.zcashRpcPassword}`);
     }
     
@@ -395,7 +388,7 @@ class ZcashSolanaBridge {
         
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
-                // Add timeout to prevent hanging
+                
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
                 
@@ -474,7 +467,7 @@ class ZcashSolanaBridge {
         
         try {
             const txid = await this.zcashRpcCall('z_sendmany', [
-                null, // from address (null = any)
+                null, 
                 [{
                     address: this.shieldedPoolAddress,
                     amount: amount,
@@ -486,7 +479,7 @@ class ZcashSolanaBridge {
                 throw new Error('Zcash RPC returned no transaction ID');
             }
             
-            // Track transaction
+            
             this.trackTransaction({
                 type: 'deposit',
                 chain: 'zcash',
@@ -496,7 +489,7 @@ class ZcashSolanaBridge {
                 status: 'pending'
             });
             
-            // Update pool balance
+            
             const roundedAmount = Math.round(amount * 1e8) / 1e8;
             const currentDeposits = Math.round((this.poolState.totalDeposits || 0) * 1e8) / 1e8;
             const currentBalance = Math.round((this.poolState.poolBalance || 0) * 1e8) / 1e8;
@@ -511,11 +504,11 @@ class ZcashSolanaBridge {
         }
     }
     
-    // ============ Pool Management ============
+    
     
     async loadPoolState() {
         try {
-            // Load from Solana program or API
+            
             if (this.poolAddress && this.solanaConnection) {
                 await this.loadSolanaWeb3();
                 const accountInfo = await this.solanaConnection.getAccountInfo(
@@ -523,13 +516,13 @@ class ZcashSolanaBridge {
                 );
                 
                 if (accountInfo) {
-                    // Parse pool state from account data
-                    // This would be decoded from your Solana program
+                    
+                    
                     this.poolState.poolBalance = accountInfo.lamports / 1e9;
                 }
             }
             
-            // Update stats from transactions
+            
             await this.updatePoolStats();
         } catch (error) {
             console.error('Error loading pool state:', error);
@@ -538,18 +531,18 @@ class ZcashSolanaBridge {
     
     async updatePoolStats() {
         try {
-            // Prevent excessive computation for large transaction arrays
+            
             const txArray = this.poolState.activeTransactions || [];
             const txCount = txArray.length;
             
-            // For large arrays, sample instead of processing all
+            
             let deposits, withdrawals;
             if (txCount > 10000) {
-                // Sample last 5000 transactions for performance
+                
                 const sample = txArray.slice(-5000);
                 deposits = sample.filter(tx => tx.type === 'deposit' || tx.type === 'bridge');
                 withdrawals = sample.filter(tx => tx.type === 'withdrawal');
-                // Scale up the sample to estimate total
+                
                 const scaleFactor = txCount / 5000;
                 const sampleDeposits = deposits.reduce((sum, tx) => {
                     const amount = parseFloat(tx.amount) || 0;
@@ -562,15 +555,15 @@ class ZcashSolanaBridge {
                 this.poolState.totalDeposits = sampleDeposits * scaleFactor;
                 this.poolState.totalWithdrawals = sampleWithdrawals * scaleFactor;
             } else {
-                // Process all transactions for accuracy
+                
                 deposits = txArray.filter(tx => tx.type === 'deposit' || tx.type === 'bridge');
                 withdrawals = txArray.filter(tx => tx.type === 'withdrawal');
                 
-                // Calculate totals safely with overflow protection
+                
                 this.poolState.totalDeposits = deposits.reduce((sum, tx) => {
                     const amount = parseFloat(tx.amount) || 0;
                     const newSum = sum + amount;
-                    // Prevent overflow
+                    
                     return newSum > Number.MAX_SAFE_INTEGER ? sum : newSum;
                 }, 0);
                 
@@ -581,10 +574,10 @@ class ZcashSolanaBridge {
                 }, 0);
             }
             
-            // Update transaction count
+            
             this.poolState.transactionCount = txCount;
             
-            // Update unique users set efficiently (only check recent transactions)
+            
             const recentTxs = txArray.slice(-1000);
             recentTxs.forEach(tx => {
                 if (tx.userAddress && tx.userAddress !== 'unknown') {
@@ -592,41 +585,41 @@ class ZcashSolanaBridge {
                 }
             });
             
-            // Calculate pool balance with proper precision handling
+            
             const calculatedBalance = this.poolState.totalDeposits - this.poolState.totalWithdrawals;
             
-            // Sync pool balance with calculated balance (use proper precision)
-            // Round to 8 decimal places to match ZEC precision
+            
+            
             const roundedCalculated = Math.round(calculatedBalance * 1e8) / 1e8;
             const roundedReported = Math.round(this.poolState.poolBalance * 1e8) / 1e8;
             
-            // If difference is significant (> 0.0001 ZEC), sync the balance
+            
             if (isNaN(this.poolState.poolBalance) || !isFinite(this.poolState.poolBalance) || 
                 this.poolState.poolBalance < 0 || Math.abs(roundedCalculated - roundedReported) > 0.0001) {
                 this.poolState.poolBalance = Math.max(0, roundedCalculated);
             }
             
-            // Validate all values are safe and properly rounded
+            
             if (!isFinite(this.poolState.totalDeposits)) {
                 this.poolState.totalDeposits = 0;
             } else {
-                // Round to prevent floating point accumulation errors
+                
                 this.poolState.totalDeposits = Math.round(this.poolState.totalDeposits * 1e8) / 1e8;
             }
             
             if (!isFinite(this.poolState.totalWithdrawals)) {
                 this.poolState.totalWithdrawals = 0;
             } else {
-                // Round to prevent floating point accumulation errors
+                
                 this.poolState.totalWithdrawals = Math.round(this.poolState.totalWithdrawals * 1e8) / 1e8;
             }
             
-            // Ensure pool balance is also rounded
+            
             this.poolState.poolBalance = Math.round(this.poolState.poolBalance * 1e8) / 1e8;
             
         } catch (error) {
             console.error('Error updating pool stats:', error);
-            // Set safe defaults
+            
             this.poolState.totalDeposits = this.poolState.totalDeposits || 0;
             this.poolState.totalWithdrawals = this.poolState.totalWithdrawals || 0;
             this.poolState.transactionCount = (this.poolState.activeTransactions || []).length;
@@ -636,19 +629,19 @@ class ZcashSolanaBridge {
     
     trackTransaction(tx) {
         try {
-            // Validate transaction data
+            
             if (!tx) {
                 console.warn('Invalid transaction: null or undefined');
                 return;
             }
             
-            // Generate unique ID if not provided
+            
             tx.id = tx.id || `tx_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             
-            // Set user address
+            
             tx.userAddress = tx.userAddress || this.solanaWallet || 'unknown';
             
-            // Validate required fields
+            
             if (!tx.type) {
                 tx.type = 'unknown';
             }
@@ -661,18 +654,18 @@ class ZcashSolanaBridge {
                 tx.status = 'pending';
             }
             
-            // Add to unique users set
+            
             if (tx.userAddress && tx.userAddress !== 'unknown') {
                 this.poolState.uniqueUsers.add(tx.userAddress);
             }
             
-            // Add transaction
+            
             this.poolState.activeTransactions.push(tx);
             
-            // Prevent memory leaks - keep only last 1000 transactions
+            
             if (this.poolState.activeTransactions.length > 1000) {
                 const removed = this.poolState.activeTransactions.shift();
-                // Remove from unique users if this was their last transaction
+                
                 if (removed.userAddress) {
                     const hasOtherTxs = this.poolState.activeTransactions.some(
                         t => t.userAddress === removed.userAddress
@@ -683,25 +676,25 @@ class ZcashSolanaBridge {
                 }
             }
             
-            // Update stats
+            
             this.updatePoolStats();
             
-            // Emit event
+            
             this.emit('transaction', tx);
             
         } catch (error) {
             console.error('Error tracking transaction:', error);
-            // Don't throw - log and continue
+            
         }
     }
     
     async getTransactionStatus(txid) {
-        // Check transaction status on respective chain
+        
         const tx = this.poolState.activeTransactions.find(t => t.txid === txid);
         if (!tx) return null;
         
         if (tx.chain === 'zcash') {
-            // Check Zcash transaction
+            
             const zcashTx = await this.zcashRpcCall('gettransaction', [txid], 2);
             return {
                 ...tx,
@@ -709,7 +702,7 @@ class ZcashSolanaBridge {
                 status: zcashTx?.confirmations > 0 ? 'confirmed' : 'pending'
             };
         } else if (tx.chain === 'solana') {
-            // Check Solana transaction (with retry and endpoint switching)
+            
             if (this.solanaConnection) {
                 try {
                     const signature = txid;
@@ -725,7 +718,7 @@ class ZcashSolanaBridge {
                     };
                 } catch (error) {
                     console.error(`Solana RPC: getSignatureStatus failed: ${error.message}`);
-                    // Try switching endpoint if 403 error
+                    
                     if (error.message.includes('403') || error.message.includes('forbidden')) {
                         await this.switchSolanaRpcEndpoint();
                         if (this.solanaConnection) {
@@ -757,10 +750,10 @@ class ZcashSolanaBridge {
         return tx;
     }
     
-    // ============ Bridge Operations ============
+    
     
     async bridgeZecToSolana(zcashAmount, solanaRecipient = null) {
-        // Validate input
+        
         const amount = parseFloat(zcashAmount);
         if (!amount || isNaN(amount) || amount <= 0) {
             throw new Error('Invalid amount: must be a positive number');
@@ -770,24 +763,24 @@ class ZcashSolanaBridge {
             throw new Error('Amount too large: maximum 1,000,000 ZEC');
         }
         
-        // Require real Solana wallet connection
+        
         const recipient = solanaRecipient || this.solanaWallet;
         if (!recipient) {
             throw new Error('Solana recipient address required. Please connect wallet or provide recipient address.');
         }
         
-        // Validate Solana address format
+        
         if (!this.isValidSolanaAddress(recipient)) {
             throw new Error('Invalid Solana address format');
         }
         
-        // Ensure Solana connection is active
+        
         if (!this.solanaConnection) {
             await this.initSolanaConnection();
         }
         
         try {
-            // Step 1: Deposit ZEC to pool
+            
             this.showBridgeStatus('Step 1/4: Depositing ZEC to pool...', 'info');
             const zcashTxid = await this.sendZcashToPool(amount, `bridge-to-${recipient}`);
             
@@ -795,11 +788,11 @@ class ZcashSolanaBridge {
                 throw new Error('Failed to create Zcash transaction');
             }
             
-            // Step 2: Wait for confirmation (in production, use proper confirmation waiting)
+            
             this.showBridgeStatus('Step 2/4: Waiting for confirmation...', 'info');
             await this.waitForZcashConfirmation(zcashTxid);
             
-            // Step 3: Generate proof (simplified - in production use actual zk-SNARK)
+            
             this.showBridgeStatus('Step 3/4: Generating zero-knowledge proof...', 'info');
             const proof = await this.generateProof(zcashTxid, amount, recipient);
             
@@ -807,7 +800,7 @@ class ZcashSolanaBridge {
                 throw new Error('Failed to generate proof');
             }
             
-            // Step 4: Mint on Solana (REAL TRANSACTION REQUIRED)
+            
             this.showBridgeStatus('Step 4/4: Minting on Solana...', 'info');
             
             if (!this.solanaWallet) {
@@ -820,7 +813,7 @@ class ZcashSolanaBridge {
                 throw new Error('Failed to create Solana transaction');
             }
             
-            // Track bridge transaction
+            
             this.trackTransaction({
                 type: 'bridge',
                 chain: 'both',
@@ -833,7 +826,7 @@ class ZcashSolanaBridge {
                 status: 'completed'
             });
             
-            // Update pool stats safely with proper precision
+            
             if (!isNaN(amount) && amount > 0) {
                 const roundedAmount = Math.round(amount * 1e8) / 1e8;
                 const currentDeposits = Math.round((this.poolState.totalDeposits || 0) * 1e8) / 1e8;
@@ -842,7 +835,7 @@ class ZcashSolanaBridge {
                 this.poolState.totalDeposits = Math.round((currentDeposits + roundedAmount) * 1e8) / 1e8;
                 this.poolState.poolBalance = Math.round((currentBalance + roundedAmount) * 1e8) / 1e8;
                 
-                // Update stats (async but don't await for performance)
+                
                 this.updatePoolStats().catch(err => {
                     console.warn('Stats update error:', err);
                 });
@@ -856,7 +849,7 @@ class ZcashSolanaBridge {
             };
         } catch (error) {
             console.error('Bridge error:', error);
-            // Track failed transaction
+            
             this.trackTransaction({
                 type: 'bridge',
                 chain: 'both',
@@ -871,9 +864,9 @@ class ZcashSolanaBridge {
         }
     }
     
-    // Helper function to show status (will be called from UI)
+    
     showBridgeStatus(message, type) {
-        // This will be handled by the UI layer
+        
         if (typeof window !== 'undefined' && window.showBridgeStatus) {
             try {
                 window.showBridgeStatus(message, type);
@@ -890,12 +883,12 @@ class ZcashSolanaBridge {
             throw new Error('Missing required proof parameters: txid, amount, recipient');
         }
         
-        // Generate real proof hashes
+        
         const amountHash = await this.hashAmount(amount);
         const recipientHash = await this.hashAddress(recipient);
         
-        // In production, this would generate actual zk-SNARK proof using a library like snarkjs
-        // For now, create a proof structure with real hashes
+        
+        
         const proof = {
             txid: txid,
             amount: amount,
@@ -926,7 +919,7 @@ class ZcashSolanaBridge {
         
         await this.loadSolanaWeb3();
         
-        // Validate addresses
+        
         let fromPubkey, toPubkey;
         try {
             fromPubkey = new this.SolanaWeb3.PublicKey(this.solanaWallet);
@@ -935,8 +928,8 @@ class ZcashSolanaBridge {
             throw new Error(`Invalid Solana address: ${error.message}`);
         }
         
-        // Create real Solana transaction
-        const lamports = Math.round(amount * 1e9); // Convert to lamports (1 SOL = 1e9 lamports)
+        
+        const lamports = Math.round(amount * 1e9); 
         if (lamports <= 0) {
             throw new Error('Invalid amount: must be greater than 0');
         }
@@ -949,7 +942,7 @@ class ZcashSolanaBridge {
             })
         );
         
-        // Get latest blockhash (with timeout and retry on 403)
+        
         let blockhash, lastValidBlockHeight;
         try {
             const blockhashPromise = this.makeSolanaRpcCall('getLatestBlockhash', 'confirmed');
@@ -961,7 +954,7 @@ class ZcashSolanaBridge {
             lastValidBlockHeight = result.lastValidBlockHeight;
         } catch (error) {
             console.error(`Solana RPC: getLatestBlockhash failed: ${error.message}`);
-            // Try switching endpoint if 403 error
+            
             if (error.message.includes('403') || error.message.includes('forbidden')) {
                 await this.switchSolanaRpcEndpoint();
                 if (this.solanaConnection) {
@@ -988,10 +981,10 @@ class ZcashSolanaBridge {
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = fromPubkey;
         
-        // Sign transaction
+        
         const signed = await window.solana.signTransaction(transaction);
         
-        // Send transaction (with retry on 403)
+        
         let signature;
         try {
             signature = await this.makeSolanaRpcCall('sendRawTransaction', signed.serialize(), {
@@ -1000,12 +993,12 @@ class ZcashSolanaBridge {
             });
         } catch (error) {
             console.error(`Solana RPC: sendRawTransaction failed: ${error.message}`);
-            // Try switching endpoint if 403 error
+            
             if (error.message.includes('403') || error.message.includes('forbidden')) {
                 await this.switchSolanaRpcEndpoint();
                 if (this.solanaConnection) {
                     try {
-                        // Need to get new blockhash for new endpoint
+                        
                         const blockhashResult = await Promise.race([
                             this.makeSolanaRpcCall('getLatestBlockhash', 'confirmed'),
                             new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
@@ -1029,7 +1022,7 @@ class ZcashSolanaBridge {
             }
         }
         
-        // Confirm transaction (with retry on 403)
+        
         let confirmation;
         try {
             confirmation = await this.makeSolanaRpcCall('confirmTransaction', {
@@ -1039,7 +1032,7 @@ class ZcashSolanaBridge {
             }, 'confirmed');
         } catch (error) {
             console.error(`Solana RPC: confirmTransaction failed: ${error.message}`);
-            // Try switching endpoint if 403 error
+            
             if (error.message.includes('403') || error.message.includes('forbidden')) {
                 await this.switchSolanaRpcEndpoint();
                 if (this.solanaConnection) {
@@ -1073,14 +1066,14 @@ class ZcashSolanaBridge {
             throw new Error('Transaction ID required');
         }
         
-        const maxAttempts = 60; // 5 minutes max wait
-        const pollInterval = 5000; // Check every 5 seconds
+        const maxAttempts = 60; 
+        const pollInterval = 5000; 
         
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
                 const txInfo = await this.zcashRpcCall('gettransaction', [txid], 2);
                 if (!txInfo) {
-                    // Wait and retry
+                    
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
                     continue;
                 }
@@ -1094,10 +1087,10 @@ class ZcashSolanaBridge {
                     };
                 }
                 
-                // Wait before next check
+                
                 await new Promise(resolve => setTimeout(resolve, pollInterval));
             } catch (error) {
-                // If transaction not found yet, continue polling
+                
                 if (error.message.includes('not found') || error.message.includes('No information')) {
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
                     continue;
@@ -1109,43 +1102,43 @@ class ZcashSolanaBridge {
         throw new Error(`Transaction ${txid} did not confirm after ${maxAttempts * pollInterval / 1000} seconds`);
     }
     
-    // ============ Utility Functions ============
+    
     
     isValidSolanaAddress(address) {
         try {
             if (!address || typeof address !== 'string') {
                 return false;
             }
-            // Basic Solana address validation (base58, 32-44 chars)
+            
             if (address.length < 32 || address.length > 44) {
                 return false;
             }
-            // Try to create PublicKey to validate
+            
             if (this.SolanaWeb3) {
                 new this.SolanaWeb3.PublicKey(address);
                 return true;
             }
-            return true; // If SolanaWeb3 not loaded yet, assume valid format
+            return true; 
         } catch (error) {
             return false;
         }
     }
     
     hashAmount(amount) {
-        // Real hash function using Web Crypto API
+        
         const encoder = new TextEncoder();
         const data = encoder.encode(amount.toString());
         return crypto.subtle.digest('SHA-256', data).then(hashBuffer => {
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
         }).catch(() => {
-            // Fallback to simple hash if crypto API not available
+            
             return btoa(amount.toString()).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
         });
     }
     
     async hashAddress(address) {
-        // Real hash function using Web Crypto API
+        
         const encoder = new TextEncoder();
         const data = encoder.encode(address);
         try {
@@ -1153,15 +1146,15 @@ class ZcashSolanaBridge {
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
         } catch (error) {
-            // Fallback to simple hash if crypto API not available
+            
             return btoa(address).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
         }
     }
     
-    // ============ Monitoring ============
+    
     
     startMonitoring() {
-        // Update pool state every 10 seconds (throttled)
+        
         let poolUpdateRunning = false;
         setInterval(async () => {
             if (!poolUpdateRunning) {
@@ -1176,7 +1169,7 @@ class ZcashSolanaBridge {
             }
         }, 10000);
         
-        // Update transaction statuses (throttled)
+        
         let statusUpdateRunning = false;
         setInterval(async () => {
             if (!statusUpdateRunning && this.poolState.activeTransactions.length < 1000) {
@@ -1207,7 +1200,7 @@ class ZcashSolanaBridge {
         this.updatePoolStats();
     }
     
-    // ============ Event System ============
+    
     
     emit(event, data) {
         if (this.eventListeners && this.eventListeners[event]) {
@@ -1225,7 +1218,7 @@ class ZcashSolanaBridge {
         this.eventListeners[event].push(callback);
     }
     
-    // ============ Transaction Checker ============
+    
     
     async checkTransaction(txid, chain = null) {
         const tx = this.poolState.activeTransactions.find(t => 
@@ -1250,7 +1243,7 @@ class ZcashSolanaBridge {
             details: {}
         };
         
-        // Check Zcash transaction
+        
         if (tx.chain === 'zcash' || tx.zcashTxid === txid || tx.type === 'deposit') {
             const zcashCheck = await this.checkZcashTransaction(tx.zcashTxid || txid);
             checks.details.zcash = zcashCheck;
@@ -1260,7 +1253,7 @@ class ZcashSolanaBridge {
             }
         }
         
-        // Check Solana transaction
+        
         if (tx.chain === 'solana' || tx.solanaTxid === txid || tx.type === 'withdrawal') {
             const solanaCheck = await this.checkSolanaTransaction(tx.solanaTxid || txid);
             checks.details.solana = solanaCheck;
@@ -1270,7 +1263,7 @@ class ZcashSolanaBridge {
             }
         }
         
-        // Check proof validity
+        
         if (tx.proof) {
             const proofCheck = await this.checkProof(tx.proof, tx);
             checks.details.proof = proofCheck;
@@ -1280,7 +1273,7 @@ class ZcashSolanaBridge {
             }
         }
         
-        // Check amount consistency
+        
         if (tx.amount) {
             const amountCheck = this.checkAmountConsistency(tx);
             checks.details.amount = amountCheck;
@@ -1358,7 +1351,7 @@ class ZcashSolanaBridge {
             const isConfirmed = status.value.confirmationStatus === 'confirmed' || 
                                status.value.confirmationStatus === 'finalized';
             
-            // Get transaction details
+            
             let tx;
             try {
                 tx = await this.makeSolanaRpcCall('getTransaction', signature, {
@@ -1367,7 +1360,7 @@ class ZcashSolanaBridge {
                 });
             } catch (txError) {
                 console.error(`Solana RPC: getTransaction failed: ${txError.message}`);
-                // Try switching endpoint if 403 error
+                
                 if (txError.message.includes('403') || txError.message.includes('forbidden')) {
                     await this.switchSolanaRpcEndpoint();
                     if (this.solanaConnection) {
@@ -1397,7 +1390,7 @@ class ZcashSolanaBridge {
             };
         } catch (error) {
             console.error(`Solana RPC: checkSolanaTransaction failed: ${error.message}`);
-            // Try switching endpoint if 403 error
+            
             if (error.message.includes('403') || error.message.includes('forbidden')) {
                 await this.switchSolanaRpcEndpoint();
                 if (this.solanaConnection) {
@@ -1436,7 +1429,7 @@ class ZcashSolanaBridge {
     
     async checkProof(proof, tx) {
         try {
-            // Verify proof structure
+            
             if (!proof.txid || !proof.amount || !proof.recipient) {
                 return {
                     valid: false,
@@ -1445,7 +1438,7 @@ class ZcashSolanaBridge {
                 };
             }
             
-            // Verify proof matches transaction
+            
             if (proof.txid !== tx.zcashTxid && proof.txid !== tx.txid) {
                 return {
                     valid: false,
@@ -1455,7 +1448,7 @@ class ZcashSolanaBridge {
                 };
             }
             
-            // Verify amount matches
+            
             if (Math.abs(proof.amount - tx.amount) > 0.00000001) {
                 return {
                     valid: false,
@@ -1465,7 +1458,7 @@ class ZcashSolanaBridge {
                 };
             }
             
-            // Verify recipient matches
+            
             if (proof.recipient !== tx.to && proof.recipient !== tx.recipient) {
                 return {
                     valid: false,
@@ -1475,7 +1468,7 @@ class ZcashSolanaBridge {
                 };
             }
             
-            // Verify public inputs hash
+            
             if (proof.publicInputs) {
                 const amountHash = await this.hashAmount(proof.amount);
                 const recipientHash = await this.hashAddress(proof.recipient);
@@ -1499,8 +1492,8 @@ class ZcashSolanaBridge {
                 }
             }
             
-            // In production, verify zk-SNARK proof here
-            // For now, return valid if structure is correct
+            
+            
             return {
                 valid: true,
                 proofValid: true,
@@ -1526,13 +1519,13 @@ class ZcashSolanaBridge {
             warnings: []
         };
         
-        // Check if amount is positive
+        
         if (!tx.amount || tx.amount <= 0) {
             checks.valid = false;
             checks.errors.push('Amount must be positive');
         }
         
-        // Check if amount matches between chains for bridge transactions
+        
         if (tx.type === 'bridge' && tx.zcashAmount && tx.solanaAmount) {
             const diff = Math.abs(tx.zcashAmount - tx.solanaAmount);
             if (diff > 0.00000001) {
@@ -1543,7 +1536,7 @@ class ZcashSolanaBridge {
         return checks;
     }
     
-    // ============ Pool Integrity Checker ============
+    
     
     async checkPoolIntegrity() {
         const report = {
@@ -1559,7 +1552,7 @@ class ZcashSolanaBridge {
             timestamp: Date.now()
         };
         
-        // Check pool balance consistency
+        
         const balanceCheck = await this.checkPoolBalance();
         report.checks.balance = balanceCheck;
         if (!balanceCheck.valid) {
@@ -1567,7 +1560,7 @@ class ZcashSolanaBridge {
             report.errors.push(...balanceCheck.errors);
         }
         
-        // Check transaction consistency
+        
         const txCheck = await this.checkTransactionConsistency();
         report.checks.transactions = txCheck;
         if (!txCheck.valid) {
@@ -1575,12 +1568,12 @@ class ZcashSolanaBridge {
             report.errors.push(...txCheck.errors);
         }
         
-        // Check chain synchronization (silent - no errors thrown)
+        
         let syncCheck;
         try {
             syncCheck = await this.checkChainSynchronization();
         } catch (error) {
-            // Silent fallback
+            
             syncCheck = {
                 valid: false,
                 zcashConnected: false,
@@ -1593,7 +1586,7 @@ class ZcashSolanaBridge {
             report.warnings.push(...syncCheck.warnings);
         }
         
-        // Check all proofs
+        
         const proofCheck = await this.checkAllProofs();
         report.checks.proofs = proofCheck;
         if (!proofCheck.valid) {
@@ -1605,20 +1598,20 @@ class ZcashSolanaBridge {
     }
     
     async checkPoolBalance() {
-        // Round values to 8 decimal places for proper comparison
+        
         const roundedDeposits = Math.round(this.poolState.totalDeposits * 1e8) / 1e8;
         const roundedWithdrawals = Math.round(this.poolState.totalWithdrawals * 1e8) / 1e8;
         const calculatedBalance = roundedDeposits - roundedWithdrawals;
         const reportedBalance = Math.round(this.poolState.poolBalance * 1e8) / 1e8;
         const diff = Math.abs(calculatedBalance - reportedBalance);
         
-        // Auto-fix if difference is significant
+        
         if (diff > 0.0001) {
             this.poolState.poolBalance = Math.max(0, calculatedBalance);
         }
         
         return {
-            valid: diff < 0.0001, // Allow for floating point precision (0.0001 ZEC tolerance)
+            valid: diff < 0.0001, 
             calculatedBalance,
             reportedBalance,
             difference: diff,
@@ -1630,7 +1623,7 @@ class ZcashSolanaBridge {
         const errors = [];
         const transactions = this.poolState.activeTransactions;
         
-        // Check for duplicate transactions
+        
         const txids = new Set();
         for (const tx of transactions) {
             const id = tx.txid || tx.zcashTxid || tx.solanaTxid;
@@ -1640,7 +1633,7 @@ class ZcashSolanaBridge {
             if (id) txids.add(id);
         }
         
-        // Check for orphaned transactions (no corresponding chain tx)
+        
         for (const tx of transactions) {
             if (tx.type === 'bridge') {
                 if (!tx.zcashTxid && !tx.solanaTxid) {
@@ -1659,11 +1652,11 @@ class ZcashSolanaBridge {
     async checkChainSynchronization() {
         const warnings = [];
         
-        // Check if we can connect to both chains
+        
         let zcashConnected = false;
         let solanaConnected = false;
         
-        // Check Zcash connection
+        
         if (this.zcashRpcUrl) {
             const blockCount = await this.zcashRpcCall('getblockcount', [], 2);
             if (blockCount !== null && blockCount > 0) {
@@ -1675,14 +1668,14 @@ class ZcashSolanaBridge {
             warnings.push('Zcash RPC: Endpoint not configured');
         }
         
-        // Check Solana connection
+        
         try {
             if (!this.solanaConnection) {
                 await this.initSolanaConnection();
             }
             
             if (this.solanaConnection) {
-                // Test connection with timeout
+                
                 const slotPromise = this.makeSolanaRpcCall('getSlot');
                 const timeoutPromise = new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Timeout')), 5000)
@@ -1701,7 +1694,7 @@ class ZcashSolanaBridge {
             console.error(`Solana RPC: Connection check failed: ${error.message}`);
             warnings.push(`Solana RPC: ${error.message}`);
             
-                // Try to switch to different endpoint
+                
                 try {
                     await this.switchSolanaRpcEndpoint();
                     if (this.solanaConnection) {
@@ -1712,7 +1705,7 @@ class ZcashSolanaBridge {
                         const slot = await Promise.race([slotPromise, timeoutPromise]);
                     if (slot && slot > 0) {
                         solanaConnected = true;
-                        warnings.pop(); // Remove error if reconnection succeeded
+                        warnings.pop(); 
                     }
                 }
             } catch (retryError) {
@@ -1746,11 +1739,11 @@ class ZcashSolanaBridge {
         };
     }
     
-    // ============ Public API ============
+    
     
     getPoolStats() {
         try {
-            // Ensure all values are valid numbers
+            
             const stats = {
                 totalTransactions: Math.max(0, parseInt(this.poolState.transactionCount) || 0),
                 activeUsers: Math.max(0, parseInt(this.poolState.uniqueUsers.size) || 0),
@@ -1762,7 +1755,7 @@ class ZcashSolanaBridge {
                 ).length
             };
             
-            // Validate no NaN or Infinity values
+            
             Object.keys(stats).forEach(key => {
                 if (isNaN(stats[key]) || !isFinite(stats[key])) {
                     console.warn(`Invalid stat value for ${key}:`, stats[key]);
@@ -1786,14 +1779,14 @@ class ZcashSolanaBridge {
     
     getRecentTransactions(limit = 10) {
         try {
-            // Validate limit
+            
             const safeLimit = Math.max(1, Math.min(1000, parseInt(limit) || 10));
             
-            // Get recent transactions safely
+            
             const transactions = this.poolState.activeTransactions || [];
             const recent = transactions.slice(-safeLimit).reverse();
             
-            // Ensure each transaction has required fields
+            
             return recent.map(tx => ({
                 id: tx.id || 'unknown',
                 type: tx.type || 'unknown',
@@ -1813,7 +1806,7 @@ class ZcashSolanaBridge {
     }
 }
 
-// Export for use
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ZcashSolanaBridge;
 }
