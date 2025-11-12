@@ -2548,9 +2548,7 @@ document.querySelectorAll('button').forEach(button => {
             ripple.remove();
         }, 600);
     });
-});
-
-
+        
         console.log('%cZCASH → SOLANA Protocol', 'color: #00d4ff; font-size: 20px; font-weight: bold;');
         console.log('%cPrivate Cross-Chain Payments', 'color: #00ff88; font-size: 14px;');
         console.log('%cBuilt with privacy in mind', 'color: #8b949e; font-size: 12px;');
