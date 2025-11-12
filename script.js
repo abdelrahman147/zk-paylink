@@ -2514,40 +2514,46 @@ window.addEventListener('scroll', () => {
 });
 
 
-document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
-    button.addEventListener('mouseenter', function() {
-        if (this.classList.contains('btn-primary')) {
-            this.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.5)';
-        } else {
-            this.style.boxShadow = '0 0 15px rgba(0, 212, 255, 0.3)';
-        }
-    });
-    
-    button.addEventListener('mouseleave', function() {
-        this.style.boxShadow = '';
-    });
-});
-
-
-document.querySelectorAll('button').forEach(button => {
-    button.addEventListener('click', function(e) {
-        const ripple = document.createElement('span');
-        const rect = this.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        const x = e.clientX - rect.left - size / 2;
-        const y = e.clientY - rect.top - size / 2;
+        try {
+            document.querySelectorAll('.btn-primary, .btn-secondary').forEach(function(button) {
+                button.addEventListener('mouseenter', function() {
+                    if (this.classList.contains('btn-primary')) {
+                        this.style.boxShadow = '0 0 20px rgba(0, 212, 255, 0.5)';
+                    } else {
+                        this.style.boxShadow = '0 0 15px rgba(0, 212, 255, 0.3)';
+                    }
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = '';
+                });
+            });
+        } catch (e) { console.error('Button hover effect error:', e); }
         
-        ripple.style.width = ripple.style.height = size + 'px';
-        ripple.style.left = x + 'px';
-        ripple.style.top = y + 'px';
-        ripple.classList.add('ripple');
-        
-        this.appendChild(ripple);
-        
-        setTimeout(() => {
-            ripple.remove();
-        }, 600);
-    });
+        try {
+            document.querySelectorAll('button').forEach(function(button) {
+                button.addEventListener('click', function(e) {
+                    try {
+                        var ripple = document.createElement('span');
+                        var rect = this.getBoundingClientRect();
+                        var size = Math.max(rect.width, rect.height);
+                        var x = e.clientX - rect.left - size / 2;
+                        var y = e.clientY - rect.top - size / 2;
+                        
+                        ripple.style.width = ripple.style.height = size + 'px';
+                        ripple.style.left = x + 'px';
+                        ripple.style.top = y + 'px';
+                        ripple.classList.add('ripple');
+                        
+                        this.appendChild(ripple);
+                        
+                        setTimeout(function() {
+                            ripple.remove();
+                        }, 600);
+                    } catch (err) { console.error('Ripple effect error:', err); }
+                });
+            });
+        } catch (e) { console.error('Button ripple effect error:', e); }
         
         console.log('%cZCASH → SOLANA Protocol', 'color: #00d4ff; font-size: 20px; font-weight: bold;');
         console.log('%cPrivate Cross-Chain Payments', 'color: #00ff88; font-size: 14px;');
