@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZCash → Solana | Private Cross-Chain Protocol</title>
+    <title>ZCash → Solana | Blockchain Oracle & Cross-Chain Protocol</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,6 +28,7 @@
             </div>
             <div class="nav-links">
                 <a href="#protocol" class="nav-link">Protocol</a>
+                <a href="#oracle" class="nav-link">Oracle</a>
                 <a href="#checker" class="nav-link">Checker</a>
                 <a href="#bridge-interface" class="nav-link">Bridge</a>
                 <a href="#proof" class="nav-link">Proof</a>
@@ -72,14 +73,14 @@
                 </div>
                 <div class="hero-text">
                     <h1 class="hero-title">
-                        <span class="code-tag">&lt;protocol&gt;</span><br>
-                        Private Cross-Chain<br>
-                        Payments
-                        <span class="code-tag">&lt;/protocol&gt;</span>
+                        <span class="code-tag">&lt;oracle&gt;</span><br>
+                        Blockchain Oracle &<br>
+                        Cross-Chain Protocol
+                        <span class="code-tag">&lt;/oracle&gt;</span>
                     </h1>
                     <p class="hero-subtitle">
-                        Buy Solana assets privately with native <span class="highlight">$ZEC</span>.<br>
-                        Zero-knowledge privacy. Seamless cross-chain.
+                        Decentralized oracle network with real-time price feeds, data aggregation, and private cross-chain payments.<br>
+                        Zero-knowledge privacy. Trustless consensus. Seamless integration.
                     </p>
                     <div class="hero-actions">
                         <button class="btn-primary btn-large" id="connect-wallet-btn">Connect Wallet</button>
@@ -141,6 +142,104 @@
         </div>
     </section>
 
+    
+    <!-- Oracle Section -->
+    <section class="oracle-section" id="oracle">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">// oracle</span>
+                <h2 class="section-title">Blockchain Oracle Network</h2>
+                <p style="color: var(--text-secondary); margin-top: 1rem;">
+                    Decentralized oracle network providing real-time price feeds, custom data feeds, and cross-chain data verification.
+                </p>
+            </div>
+            
+            <div class="oracle-dashboard">
+                <div class="oracle-stats">
+                    <div class="oracle-stat-card">
+                        <div class="stat-icon">🔗</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="oracle-nodes-count">0</div>
+                            <div class="stat-label">Oracle Nodes</div>
+                        </div>
+                    </div>
+                    <div class="oracle-stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="oracle-staked">0</div>
+                            <div class="stat-label">Total Staked (SOL)</div>
+                        </div>
+                    </div>
+                    <div class="oracle-stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="oracle-feeds-count">0</div>
+                            <div class="stat-label">Active Feeds</div>
+                        </div>
+                    </div>
+                    <div class="oracle-stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="oracle-consensus">0%</div>
+                            <div class="stat-label">Consensus Rate</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="oracle-content-grid">
+                    <div class="oracle-panel">
+                        <h3>Price Feeds</h3>
+                        <div id="price-feeds-container" class="price-feeds-list">
+                            <div class="loading">Loading price feeds...</div>
+                        </div>
+                        <button class="btn-primary" id="refresh-prices-btn">Refresh Prices</button>
+                    </div>
+                    
+                    <div class="oracle-panel">
+                        <h3>Oracle Nodes</h3>
+                        <div id="oracle-nodes-container" class="nodes-list">
+                            <div class="loading">Loading nodes...</div>
+                        </div>
+                        <button class="btn-secondary" id="register-node-btn">Register Node</button>
+                    </div>
+                </div>
+                
+                <div class="oracle-panel full-width">
+                    <h3>Submit Data Feed</h3>
+                    <div class="oracle-form">
+                        <div class="form-group">
+                            <label>Feed ID</label>
+                            <input type="text" id="feed-id-input" placeholder="e.g., BTC-USD-PRICE" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Data Value</label>
+                            <input type="text" id="feed-data-input" placeholder="e.g., 45000.50" class="form-input">
+                        </div>
+                        <button class="btn-primary" id="submit-feed-btn">Submit Feed</button>
+                    </div>
+                </div>
+                
+                <div class="oracle-panel full-width">
+                    <h3>Node Management</h3>
+                    <div class="node-management">
+                        <div class="form-group">
+                            <label>Node Address</label>
+                            <input type="text" id="node-address-input" placeholder="Enter Solana address" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Stake Amount (SOL)</label>
+                            <input type="number" id="stake-amount-input" placeholder="0.0" step="0.1" min="0" class="form-input">
+                        </div>
+                        <div class="button-group">
+                            <button class="btn-primary" id="stake-btn">Stake</button>
+                            <button class="btn-secondary" id="unstake-btn">Unstake</button>
+                            <button class="btn-secondary" id="view-node-btn">View Node Info</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
     
     <section class="protocol-section" id="protocol">
         <div class="container">
@@ -433,9 +532,9 @@ Chain synchronization OK</code></pre>
         <div class="container">
             <div class="section-header">
                 <span class="section-tag">// game</span>
-                <h2 class="section-title">Mini Game - Pay to Play</h2>
+                <h2 class="section-title">Mini Game - Free to Play</h2>
                 <p style="color: var(--text-secondary); margin-top: 1rem;">
-                    Click targets to score points! Costs 0.01 SOL per game. Payments are used for token buybacks and burns to support the protocol.
+                    Click targets to score points! Free to play - just connect your wallet to start. Compete on the leaderboard!
                 </p>
             </div>
             <div class="game-container">
@@ -454,13 +553,13 @@ Chain synchronization OK</code></pre>
                             <span class="info-value" id="game-time">0s</span>
                         </div>
                     </div>
-                    <button class="btn-primary btn-large" id="start-game-btn">Pay 0.01 SOL & Start Game</button>
+                    <button class="btn-primary btn-large" id="start-game-btn">Connect Wallet & Start Game</button>
                     <div id="game-status" class="game-status"></div>
                 </div>
                 <div class="game-area" id="game-area">
                     <div class="game-start-screen" id="game-start-screen">
                         <h3>Mini Game</h3>
-                        <p>Click the button above to pay 0.01 SOL and start playing!</p>
+                        <p>Click the button above to connect your wallet and start playing!</p>
                         <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 1rem;">
                             Click on targets to score points. Clicking background loses 1 life. Miss 5 targets and the game ends!
                         </p>
@@ -516,6 +615,36 @@ Chain synchronization OK</code></pre>
                         <code class="endpoint-path">api.sendPayment(amount, recipient, memo)</code>
                         <p>Send SOL payment. Returns transaction signature on success.</p>
                     </div>
+                    <div class="endpoint-item">
+                        <code class="endpoint-method">GET</code>
+                        <code class="endpoint-path">oracle.getPriceFeed(symbol)</code>
+                        <p>Get real-time price feed for a cryptocurrency symbol (BTC, ETH, SOL, etc.)</p>
+                    </div>
+                    <div class="endpoint-item">
+                        <code class="endpoint-method">GET</code>
+                        <code class="endpoint-path">oracle.getAllPriceFeeds()</code>
+                        <p>Get all available price feeds with aggregated data from multiple sources</p>
+                    </div>
+                    <div class="endpoint-item">
+                        <code class="endpoint-method">POST</code>
+                        <code class="endpoint-path">oracle.submitDataFeed(feedId, data, nodeAddress)</code>
+                        <p>Submit custom data feed to the oracle network</p>
+                    </div>
+                    <div class="endpoint-item">
+                        <code class="endpoint-method">POST</code>
+                        <code class="endpoint-path">oracle.registerNode(nodeAddress, metadata)</code>
+                        <p>Register a new oracle node in the network</p>
+                    </div>
+                    <div class="endpoint-item">
+                        <code class="endpoint-method">POST</code>
+                        <code class="endpoint-path">oracle.stake(nodeAddress, amount)</code>
+                        <p>Stake SOL to become a qualified oracle node operator</p>
+                    </div>
+                    <div class="endpoint-item">
+                        <code class="endpoint-method">GET</code>
+                        <code class="endpoint-path">oracle.getStats()</code>
+                        <p>Get oracle network statistics (nodes, staked amount, feeds, etc.)</p>
+                    </div>
                 </div>
                 <div class="api-example">
                     <h3>Usage Example</h3>
@@ -541,7 +670,16 @@ const txStatus = await api.checkTransaction('txid-or-signature');
 
 const integrity = await api.getPoolIntegrity();
 
-const transactions = await api.getRecentTransactions(10);</code></pre>
+const transactions = await api.getRecentTransactions(10);
+
+// Oracle API Examples
+const btcPrice = oracle.getPriceFeed('BTC');
+const allFeeds = oracle.getAllPriceFeeds();
+const stats = oracle.getStats();
+
+await oracle.submitDataFeed('BTC-USD-PRICE', 45000.50, walletAddress);
+await oracle.registerNode(walletAddress, { name: 'My Oracle Node' });
+await oracle.stake(walletAddress, 100);</code></pre>
                     </div>
                 </div>
             </div>
@@ -594,9 +732,9 @@ const transactions = await api.getRecentTransactions(10);</code></pre>
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-brand">
+                    <div class="footer-brand">
                     <div class="footer-logo">ZCASH<span class="accent">→</span>SOL</div>
-                    <p>Private cross-chain payments protocol</p>
+                    <p>Blockchain Oracle & Private Cross-Chain Protocol</p>
                 </div>
                 <div class="footer-links">
                     <div class="footer-column">
@@ -717,6 +855,7 @@ const transactions = await api.getRecentTransactions(10);</code></pre>
         <script src="test-suite.js"></script>
         <script src="api-service.js"></script>
         <script src="api-test-suite.js"></script>
+        <script src="oracle-service.js"></script>
         <script src="mini-game.js"></script>
         <script src="anti-cheat.js"></script>
         <script src="leaderboard-sheets.js"></script>

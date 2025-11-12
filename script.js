@@ -5,10 +5,12 @@
         window.bridge = window.bridge || null;
         window.api = window.api || null;
         window.game = window.game || null;
+        window.oracle = window.oracle || null;
         
         var bridge = window.bridge;
         var api = window.api;
         var game = window.game;
+        var oracle = window.oracle;
         var gameInterval = null;
         var targetTimeout = null;
 
@@ -144,6 +146,12 @@
                 if (typeof initGame === 'function') initGame();
             } catch (error) {
                 console.error('Failed to initialize game:', error);
+            }
+            
+            try {
+                if (typeof initOracle === 'function') initOracle();
+            } catch (error) {
+                console.error('Failed to initialize oracle:', error);
             }
             
             setTimeout(attachAllButtonListeners, 100);
@@ -434,8 +442,8 @@ async function startGame() {
     
     try {
         startBtn.disabled = true;
-        startBtn.textContent = 'Processing Payment...';
-        showGameStatus('Processing payment of 0.01 SOL...', 'info');
+        startBtn.textContent = 'Starting Game...';
+        showGameStatus('Starting game...', 'info');
         
         
         if (!api.bridge) {
@@ -451,10 +459,7 @@ async function startGame() {
         const result = await game.startGame();
         
         if (result.success) {
-            const paymentMsg = result.paymentSignature 
-                ? `Payment successful! TX: ${result.paymentSignature.substring(0, 16)}...` 
-                : 'Admin access granted! Game starting...';
-            showGameStatus(paymentMsg, 'success');
+            showGameStatus('Game starting...', 'success');
             
             
             if (antiCheat) {
@@ -490,7 +495,7 @@ async function startGame() {
         console.error('Game start error:', error);
         showGameStatus('Error: ' + error.message, 'error');
         startBtn.disabled = false;
-        startBtn.textContent = 'Pay 0.01 SOL & Start Game';
+        startBtn.textContent = 'Connect Wallet & Start Game';
     }
 }
 
@@ -848,7 +853,7 @@ async function endGame() {
     
     if (startBtn) {
         startBtn.disabled = false;
-        startBtn.textContent = 'Pay 0.01 SOL & Start Game';
+        startBtn.textContent = 'Connect Wallet & Start Game';
     }
     
     
@@ -2309,6 +2314,109 @@ function initCopyButtons() {
             }
         });
     });
+    
+    // Initialize API endpoint tabs and selection
+    initAPIEndpointTabs();
+}
+
+function initAPIEndpointTabs() {
+    const tabs = document.querySelectorAll('.endpoint-tab');
+    const bridgeEndpoints = document.getElementById('bridge-endpoints');
+    const oracleEndpoints = document.getElementById('oracle-endpoints');
+    const exampleCode = document.getElementById('api-example-code');
+    
+    // Tab switching
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const tabType = tab.dataset.tab;
+            if (tabType === 'bridge') {
+                bridgeEndpoints.style.display = 'block';
+                oracleEndpoints.style.display = 'none';
+                updateAPIExample('getStatus');
+            } else {
+                bridgeEndpoints.style.display = 'none';
+                oracleEndpoints.style.display = 'block';
+                updateAPIExample('getPriceFeed');
+            }
+        });
+    });
+    
+    // Endpoint selection
+    const endpointItems = document.querySelectorAll('.endpoint-item');
+    endpointItems.forEach(item => {
+        item.addEventListener('click', () => {
+            endpointItems.forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            
+            const endpoint = item.dataset.endpoint;
+            updateAPIExample(endpoint);
+        });
+    });
+}
+
+function updateAPIExample(endpoint) {
+    const exampleCode = document.getElementById('api-example-code');
+    if (!exampleCode) return;
+    
+    const examples = {
+        'getStatus': `const api = new ProtocolAPI();
+api.init(bridge);
+
+const status = await api.getStatus();
+console.log(status);`,
+        'bridgeZecToSolana': `const api = new ProtocolAPI();
+api.init(bridge);
+
+const result = await api.bridgeZecToSolana(1.0, 'recipient-address');
+console.log(result);`,
+        'checkTransaction': `const api = new ProtocolAPI();
+api.init(bridge);
+
+const txStatus = await api.checkTransaction('txid-or-signature');
+console.log(txStatus);`,
+        'getPoolIntegrity': `const api = new ProtocolAPI();
+api.init(bridge);
+
+const integrity = await api.getPoolIntegrity();
+console.log(integrity);`,
+        'getRecentTransactions': `const api = new ProtocolAPI();
+api.init(bridge);
+
+const transactions = await api.getRecentTransactions(10);
+console.log(transactions);`,
+        'sendPayment': `const api = new ProtocolAPI();
+api.init(bridge);
+
+const payment = await api.sendPayment(
+    0.01, 
+    'recipient-address',
+    'memo-text'
+);
+console.log(payment);`,
+        'getPriceFeed': `const btcPrice = oracle.getPriceFeed('BTC');
+console.log(btcPrice);`,
+        'getAllPriceFeeds': `const allFeeds = oracle.getAllPriceFeeds();
+console.log(allFeeds);`,
+        'submitDataFeed': `await oracle.submitDataFeed(
+    'BTC-USD-PRICE', 
+    45000.50, 
+    walletAddress
+);`,
+        'registerNode': `await oracle.registerNode(walletAddress, { 
+    name: 'My Oracle Node',
+    capabilities: ['price-feeds', 'custom-feeds']
+});`,
+        'stake': `await oracle.stake(walletAddress, 100);`,
+        'getStats': `const stats = oracle.getStats();
+console.log(stats);`
+    };
+    
+    if (examples[endpoint]) {
+        exampleCode.textContent = examples[endpoint];
+    }
 }
 
 
@@ -2482,6 +2590,378 @@ function escapeHtml(text) {
 
 
 setTimeout(highlightCode, 100);
+
+
+// ========== ORACLE INITIALIZATION ==========
+
+function initOracle() {
+    try {
+        // Wait for bridge to be ready
+        if (!bridge) {
+            setTimeout(() => {
+                initOracle();
+            }, 1000);
+            return;
+        }
+        
+        oracle = new BlockchainOracle({
+            bridge: bridge,
+            api: api,
+            verificationThreshold: 0.51,
+            minNodes: 3,
+            minStake: 100,
+            slashThreshold: 0.1
+        });
+        
+        window.oracle = oracle;
+        
+        console.log('Oracle Service initialized');
+        
+        // Initialize oracle UI
+        setTimeout(() => {
+            initOracleUI();
+        }, 500);
+        
+        // Update oracle stats periodically
+        setInterval(() => {
+            if (oracle) {
+                updateOracleStats();
+                updatePriceFeeds();
+                updateOracleNodes();
+            }
+        }, 5000);
+        
+        // Initial update
+        setTimeout(() => {
+            if (oracle) {
+                updateOracleStats();
+                updatePriceFeeds();
+                updateOracleNodes();
+            }
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Failed to initialize oracle:', error);
+        // Retry after delay
+        setTimeout(() => {
+            initOracle();
+        }, 3000);
+    }
+}
+
+function initOracleUI() {
+    // Refresh prices button
+    const refreshPricesBtn = document.getElementById('refresh-prices-btn');
+    if (refreshPricesBtn) {
+        refreshPricesBtn.addEventListener('click', async () => {
+            refreshPricesBtn.disabled = true;
+            refreshPricesBtn.textContent = 'Refreshing...';
+            try {
+                await updatePriceFeeds(true);
+                showOracleStatus('Prices refreshed successfully', 'success');
+            } catch (error) {
+                showOracleStatus('Failed to refresh prices: ' + error.message, 'error');
+            } finally {
+                refreshPricesBtn.disabled = false;
+                refreshPricesBtn.textContent = 'Refresh Prices';
+            }
+        });
+    }
+    
+    // Register node button
+    const registerNodeBtn = document.getElementById('register-node-btn');
+    if (registerNodeBtn) {
+        registerNodeBtn.addEventListener('click', async () => {
+            if (!bridge || !bridge.solanaWallet) {
+                showOracleStatus('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            try {
+                registerNodeBtn.disabled = true;
+                registerNodeBtn.textContent = 'Registering...';
+                
+                await oracle.registerNode(bridge.solanaWallet, {
+                    name: `Node-${bridge.solanaWallet.substring(0, 8)}`,
+                    capabilities: ['price-feeds', 'custom-feeds']
+                });
+                
+                showOracleStatus('Node registered successfully', 'success');
+                updateOracleNodes();
+                updateOracleStats();
+            } catch (error) {
+                showOracleStatus('Failed to register node: ' + error.message, 'error');
+            } finally {
+                registerNodeBtn.disabled = false;
+                registerNodeBtn.textContent = 'Register Node';
+            }
+        });
+    }
+    
+    // Submit feed button
+    const submitFeedBtn = document.getElementById('submit-feed-btn');
+    if (submitFeedBtn) {
+        submitFeedBtn.addEventListener('click', async () => {
+            if (!bridge || !bridge.solanaWallet) {
+                showOracleStatus('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            const feedId = document.getElementById('feed-id-input').value.trim();
+            const dataValue = document.getElementById('feed-data-input').value.trim();
+            
+            if (!feedId || !dataValue) {
+                showOracleStatus('Please fill in all fields', 'error');
+                return;
+            }
+            
+            try {
+                submitFeedBtn.disabled = true;
+                submitFeedBtn.textContent = 'Submitting...';
+                
+                const data = isNaN(dataValue) ? dataValue : parseFloat(dataValue);
+                await oracle.submitDataFeed(feedId, data, bridge.solanaWallet);
+                
+                showOracleStatus('Feed submitted successfully', 'success');
+                document.getElementById('feed-id-input').value = '';
+                document.getElementById('feed-data-input').value = '';
+                updateOracleStats();
+            } catch (error) {
+                showOracleStatus('Failed to submit feed: ' + error.message, 'error');
+            } finally {
+                submitFeedBtn.disabled = false;
+                submitFeedBtn.textContent = 'Submit Feed';
+            }
+        });
+    }
+    
+    // Stake button
+    const stakeBtn = document.getElementById('stake-btn');
+    if (stakeBtn) {
+        stakeBtn.addEventListener('click', async () => {
+            if (!bridge || !bridge.solanaWallet) {
+                showOracleStatus('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            const nodeAddress = document.getElementById('node-address-input').value.trim() || bridge.solanaWallet;
+            const amount = parseFloat(document.getElementById('stake-amount-input').value);
+            
+            if (!amount || amount <= 0) {
+                showOracleStatus('Please enter a valid stake amount', 'error');
+                return;
+            }
+            
+            try {
+                stakeBtn.disabled = true;
+                stakeBtn.textContent = 'Staking...';
+                
+                // In a real implementation, this would send SOL to a staking contract
+                await oracle.stake(nodeAddress, amount);
+                
+                showOracleStatus(`Staked ${amount} SOL successfully`, 'success');
+                document.getElementById('stake-amount-input').value = '';
+                updateOracleNodes();
+                updateOracleStats();
+            } catch (error) {
+                showOracleStatus('Failed to stake: ' + error.message, 'error');
+            } finally {
+                stakeBtn.disabled = false;
+                stakeBtn.textContent = 'Stake';
+            }
+        });
+    }
+    
+    // Unstake button
+    const unstakeBtn = document.getElementById('unstake-btn');
+    if (unstakeBtn) {
+        unstakeBtn.addEventListener('click', async () => {
+            if (!bridge || !bridge.solanaWallet) {
+                showOracleStatus('Please connect your wallet first', 'error');
+                return;
+            }
+            
+            const nodeAddress = document.getElementById('node-address-input').value.trim() || bridge.solanaWallet;
+            const amount = parseFloat(document.getElementById('stake-amount-input').value);
+            
+            if (!amount || amount <= 0) {
+                showOracleStatus('Please enter a valid unstake amount', 'error');
+                return;
+            }
+            
+            try {
+                unstakeBtn.disabled = true;
+                unstakeBtn.textContent = 'Unstaking...';
+                
+                await oracle.unstake(nodeAddress, amount);
+                
+                showOracleStatus(`Unstaked ${amount} SOL successfully`, 'success');
+                document.getElementById('stake-amount-input').value = '';
+                updateOracleNodes();
+                updateOracleStats();
+            } catch (error) {
+                showOracleStatus('Failed to unstake: ' + error.message, 'error');
+            } finally {
+                unstakeBtn.disabled = false;
+                unstakeBtn.textContent = 'Unstake';
+            }
+        });
+    }
+    
+    // View node button
+    const viewNodeBtn = document.getElementById('view-node-btn');
+    if (viewNodeBtn) {
+        viewNodeBtn.addEventListener('click', async () => {
+            const nodeAddress = document.getElementById('node-address-input').value.trim() || bridge?.solanaWallet;
+            
+            if (!nodeAddress) {
+                showOracleStatus('Please enter a node address', 'error');
+                return;
+            }
+            
+            const nodeInfo = oracle.getNodeInfo(nodeAddress);
+            if (!nodeInfo) {
+                showOracleStatus('Node not found', 'error');
+                return;
+            }
+            
+            const info = `
+Node Address: ${nodeInfo.address.substring(0, 8)}...${nodeInfo.address.substring(nodeInfo.address.length - 8)}
+Stake: ${nodeInfo.stake} SOL
+Reputation: ${nodeInfo.reputation.toFixed(2)}%
+Total Submissions: ${nodeInfo.totalSubmissions}
+Correct Submissions: ${nodeInfo.correctSubmissions}
+Accuracy: ${nodeInfo.totalSubmissions > 0 ? ((nodeInfo.correctSubmissions / nodeInfo.totalSubmissions) * 100).toFixed(2) : 0}%
+            `;
+            
+            alert(info);
+        });
+    }
+}
+
+async function updatePriceFeeds(forceRefresh = false) {
+    if (!oracle) return;
+    
+    const container = document.getElementById('price-feeds-container');
+    if (!container) return;
+    
+    try {
+        const feeds = oracle.getAllPriceFeeds();
+        
+        if (feeds.length === 0) {
+            container.innerHTML = '<div class="loading">No price feeds available yet</div>';
+            return;
+        }
+        
+        container.innerHTML = feeds.map(feed => {
+            const date = new Date(feed.timestamp);
+            const timeAgo = Math.floor((Date.now() - feed.timestamp) / 1000);
+            const timeStr = timeAgo < 60 ? `${timeAgo}s ago` : `${Math.floor(timeAgo / 60)}m ago`;
+            
+            return `
+                <div class="price-feed-item">
+                    <div>
+                        <div class="feed-symbol">${feed.symbol}</div>
+                        <div class="feed-timestamp">${timeStr} • ${feed.sources} sources</div>
+                    </div>
+                    <div class="feed-price">$${feed.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error updating price feeds:', error);
+        container.innerHTML = '<div class="loading">Error loading price feeds</div>';
+    }
+}
+
+function updateOracleNodes() {
+    if (!oracle) return;
+    
+    const container = document.getElementById('oracle-nodes-container');
+    if (!container) return;
+    
+    try {
+        const nodes = oracle.getAllNodes();
+        
+        if (nodes.length === 0) {
+            container.innerHTML = '<div class="loading">No nodes registered yet</div>';
+            return;
+        }
+        
+        container.innerHTML = nodes.map(node => {
+            const shortAddress = `${node.address.substring(0, 8)}...${node.address.substring(node.address.length - 8)}`;
+            const qualified = node.stake >= oracle.minStake;
+            
+            return `
+                <div class="node-item">
+                    <div>
+                        <div class="node-address">${shortAddress}</div>
+                        <div class="node-reputation">Reputation: ${node.reputation.toFixed(1)}%</div>
+                    </div>
+                    <div>
+                        <div class="node-stake">${node.stake.toFixed(2)} SOL</div>
+                        ${qualified ? '<div style="color: var(--accent-success); font-size: 0.75rem;">Qualified</div>' : '<div style="color: var(--accent-warning); font-size: 0.75rem;">Insufficient Stake</div>'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error updating oracle nodes:', error);
+        container.innerHTML = '<div class="loading">Error loading nodes</div>';
+    }
+}
+
+function updateOracleStats() {
+    if (!oracle) return;
+    
+    try {
+        const stats = oracle.getStats();
+        
+        const nodesCountEl = document.getElementById('oracle-nodes-count');
+        if (nodesCountEl) nodesCountEl.textContent = stats.totalNodes;
+        
+        const stakedEl = document.getElementById('oracle-staked');
+        if (stakedEl) stakedEl.textContent = stats.totalStaked.toFixed(2);
+        
+        const feedsCountEl = document.getElementById('oracle-feeds-count');
+        if (feedsCountEl) feedsCountEl.textContent = stats.priceFeeds + stats.customFeeds;
+        
+        const consensusEl = document.getElementById('oracle-consensus');
+        if (consensusEl) {
+            const consensusRate = stats.activeNodes > 0 ? 95 : 0; // Placeholder
+            consensusEl.textContent = consensusRate + '%';
+        }
+    } catch (error) {
+        console.error('Error updating oracle stats:', error);
+    }
+}
+
+function showOracleStatus(message, type = 'info') {
+    console.log(`[Oracle ${type}]:`, message);
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = 'position:fixed;top:20px;right:20px;padding:1rem 1.5rem;background:var(--bg-tertiary);border:2px solid var(--accent-primary);border-radius:8px;z-index:10000;color:var(--text-primary);font-family:var(--font-mono);max-width:400px;';
+    alertDiv.className = `oracle-status-alert ${type}`;
+    
+    if (type === 'success') {
+        alertDiv.style.borderColor = 'var(--accent-success)';
+        alertDiv.style.color = 'var(--accent-success)';
+    } else if (type === 'error') {
+        alertDiv.style.borderColor = 'var(--accent-error)';
+        alertDiv.style.color = 'var(--accent-error)';
+    } else {
+        alertDiv.style.borderColor = 'var(--accent-primary)';
+        alertDiv.style.color = 'var(--accent-primary)';
+    }
+    
+    alertDiv.textContent = message;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, type === 'error' ? 8000 : 5000);
+}
+
 
 
 function typeText(element, text, speed = 50) {

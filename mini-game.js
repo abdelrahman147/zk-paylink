@@ -29,36 +29,20 @@ class MiniGame {
             throw new Error('Game already in progress');
         }
 
-        const isAdminWallet = this.api.bridge.solanaWallet === this.adminWallet;
-        let paymentResult = null;
-
         try {
-            
-            if (!isAdminWallet) {
-                paymentResult = await this.api.sendPayment(
-                    this.gameCost,
-                    this.gameWallet,
-                    `TokenBuyback-${Date.now()}`
-                );
-
-                if (!paymentResult.success) {
-                    throw new Error('Payment failed: ' + paymentResult.error);
-                }
-            }
-
-            
+            // Game is now free to play - just need wallet connection
             this.score = 0;
             this.missedTargets = 0;
             this.targets = [];
             this.isPlaying = true;
             this.gameStartTime = Date.now();
-            this.paymentSignature = isAdminWallet ? null : paymentResult.signature;
+            this.paymentSignature = null; // No payment needed
 
             return {
                 success: true,
-                paymentSignature: this.paymentSignature,
-                isAdmin: isAdminWallet,
-                message: isAdminWallet ? 'Admin access granted! Game starting...' : 'Payment successful! Game starting...'
+                paymentSignature: null,
+                isAdmin: false,
+                message: 'Game starting...'
             };
         } catch (error) {
             throw new Error('Failed to start game: ' + error.message);
