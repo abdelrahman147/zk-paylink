@@ -166,16 +166,16 @@ class BridgeTestSuite {
         
         if (!this.bridge.solanaWallet) {
             this.bridge.solanaWallet = 'test_wallet_' + Date.now();
-            console.log('✅ Demo wallet initialized for testing');
+            console.log('Demo wallet initialized for testing');
         }
         
         
         if (!this.bridge.shieldedPoolAddress) {
             this.bridge.shieldedPoolAddress = 'zt1test' + Math.random().toString(36).substring(7);
-            console.log('✅ Pool address initialized for testing');
+            console.log('Pool address initialized for testing');
         }
         
-        console.log('✅ Pre-test checks passed');
+        console.log('Pre-test checks passed');
     }
     
     async runSingleTest(testNumber, totalTests) {
@@ -521,7 +521,7 @@ class BridgeTestSuite {
     }
     
     async postTestValidation() {
-        console.log('📊 Running post-test validation...');
+        console.log('Running post-test validation...');
         
         
         const poolCheck = await this.bridge.checkPoolIntegrity();
@@ -547,7 +547,7 @@ class BridgeTestSuite {
             });
         }
         
-        console.log('✅ Post-test validation completed');
+        console.log('Post-test validation completed');
     }
     
     updatePerformanceMetrics(testTime) {
@@ -585,14 +585,14 @@ class BridgeTestSuite {
 ║  ⚠️  Warnings:      ${this.results.warnings.length.toString().padStart(10)}                    ║
 ║  ⏱️  Total Time:    ${totalTime.toString().padStart(10)}s                  ║
 ║  🚀 Tests/Sec:      ${testsPerSec.toString().padStart(10)}                    ║
-║  📊 Avg Time:      ${this.results.performance.avgTime.toFixed(2).padStart(10)}ms                  ║
-║  ⚡ Min Time:       ${this.results.performance.minTime.toFixed(2).padStart(10)}ms                  ║
+║  Avg Time:      ${this.results.performance.avgTime.toFixed(2).padStart(10)}ms                  ║
+║  Min Time:       ${this.results.performance.minTime.toFixed(2).padStart(10)}ms                  ║
 ║  🐌 Max Time:       ${this.results.performance.maxTime.toFixed(2).padStart(10)}ms                  ║
 ╚══════════════════════════════════════════════════════════╝
         `);
         
         if (this.results.errors.length > 0) {
-            console.log('\n❌ Errors Found:');
+            console.log('\nErrors Found:');
             this.results.errors.slice(0, 10).forEach((error, i) => {
                 console.log(`   ${i + 1}. Test ${error.testNumber}: ${error.message || error.type}`);
             });
@@ -602,7 +602,7 @@ class BridgeTestSuite {
         }
         
         if (this.results.warnings.length > 0) {
-            console.log('\n⚠️  Warnings (Auto-fixed):');
+            console.log('\nWarnings (Auto-fixed):');
             const warningTypes = {};
             this.results.warnings.forEach(w => {
                 warningTypes[w.type] = (warningTypes[w.type] || 0) + 1;
@@ -615,7 +615,7 @@ class BridgeTestSuite {
         
         const stats = this.bridge.getPoolStats();
         console.log(`
-📊 Final Pool Stats:
+Final Pool Stats:
    Total Transactions: ${stats.totalTransactions}
    Active Users: ${stats.activeUsers}
    Pool Balance: ${stats.poolBalance.toFixed(8)} ZEC

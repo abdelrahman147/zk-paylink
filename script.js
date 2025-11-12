@@ -158,7 +158,7 @@ function initAPI() {
         api = new ProtocolAPI();
         window.api = api; 
         
-        console.log('✅ API Service initialized');
+        console.log('API Service initialized');
     } catch (error) {
         console.error('Failed to initialize API:', error);
     }
@@ -172,12 +172,12 @@ function initGame() {
     try {
         game = new MiniGame();
         
-        console.log('✅ Mini Game initialized');
+        console.log('Mini Game initialized');
         
         
         if (typeof AntiCheat !== 'undefined') {
             antiCheat = new AntiCheat();
-            console.log('✅ Anti-Cheat system initialized');
+            console.log('Anti-Cheat system initialized');
         }
         
         if (typeof LeaderboardSheets !== 'undefined' && typeof CONFIG !== 'undefined') {
@@ -301,8 +301,8 @@ async function startGame() {
         
         if (result.success) {
             const paymentMsg = result.paymentSignature 
-                ? `✅ Payment successful! TX: ${result.paymentSignature.substring(0, 16)}...` 
-                : '✅ Admin access granted! Game starting...';
+                ? `Payment successful! TX: ${result.paymentSignature.substring(0, 16)}...` 
+                : 'Admin access granted! Game starting...';
             showGameStatus(paymentMsg, 'success');
             
             
@@ -337,7 +337,7 @@ async function startGame() {
         }
     } catch (error) {
         console.error('Game start error:', error);
-        showGameStatus('❌ ' + error.message, 'error');
+        showGameStatus('Error: ' + error.message, 'error');
         startBtn.disabled = false;
         startBtn.textContent = 'Pay 0.01 SOL & Start Game';
     }
@@ -1320,7 +1320,7 @@ async function showNFTsModal() {
             nfts.forEach(nft => {
                 html += `
                     <div class="portfolio-item">
-                        <div class="token-icon">🖼️</div>
+                        <div class="token-icon"></div>
                         <div class="token-name">${nft.name || 'NFT'}</div>
                         <div class="token-value">${nft.collection || 'Unknown'}</div>
                     </div>
@@ -1361,7 +1361,7 @@ async function showHistoryModal() {
                 const statusClass = tx.err ? 'error' : (tx.confirmationStatus === 'confirmed' || tx.confirmationStatus === 'finalized') ? 'success' : 'pending';
                 html += `
                     <div class="tx-history-item">
-                        <div class="tx-icon-large">${tx.err ? '❌' : '✓'}</div>
+                        <div class="tx-icon-large">${tx.err ? 'X' : 'OK'}</div>
                         <div class="tx-details-full">
                             <div class="tx-title">${tx.err ? 'Failed Transaction' : 'Transaction'}</div>
                             <div class="tx-subtitle">${date.toLocaleString()} • Slot: ${tx.slot}</div>
@@ -1389,11 +1389,11 @@ async function connectWallet() {
     
     
     if (typeof window === 'undefined' || !window.solana || !window.solana.isPhantom) {
-        showBridgeStatus('⚠️ Phantom wallet not detected! Install Phantom to use REAL MODE.', 'error');
+        showBridgeStatus('Phantom wallet not detected! Install Phantom to use REAL MODE.', 'error');
         showBridgeStatus('You can still use demo mode for testing.', 'info');
         
         bridge.solanaWallet = null;
-        document.getElementById('connect-wallet-btn').textContent = '⚠️ Install Phantom';
+        document.getElementById('connect-wallet-btn').textContent = 'Install Phantom';
         document.getElementById('connect-wallet-btn').style.background = 'var(--accent-warning)';
         document.getElementById('use-wallet-btn').style.display = 'none';
         return;
@@ -1428,7 +1428,7 @@ async function connectWallet() {
         
         await updateBalances();
         
-        showBridgeStatus('✅ Wallet connected! REAL MODE activated.', 'success');
+        showBridgeStatus('Wallet connected! REAL MODE activated.', 'success');
         
         
         setInterval(async () => {
@@ -1439,7 +1439,7 @@ async function connectWallet() {
         
     } catch (error) {
         console.error('Wallet connection error:', error);
-        showBridgeStatus('❌ Failed to connect: ' + error.message, 'error');
+        showBridgeStatus('Failed to connect: ' + error.message, 'error');
         showBridgeStatus('Falling back to demo mode...', 'info');
         
         bridge.solanaWallet = null;
@@ -1672,7 +1672,7 @@ function updateTransactionList() {
     
     transactionList.innerHTML = transactions.map(tx => {
         const date = new Date(tx.timestamp);
-        const typeIcon = tx.type === 'deposit' ? '⬇️' : tx.type === 'withdrawal' ? '⬆️' : '🔄';
+        const typeIcon = tx.type === 'deposit' ? 'D' : tx.type === 'withdrawal' ? 'W' : 'T';
         const statusClass = tx.status === 'completed' ? 'success' : tx.status === 'pending' ? 'pending' : 'error';
         
         return `

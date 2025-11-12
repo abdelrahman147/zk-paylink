@@ -1645,7 +1645,7 @@ pre code {
 }
 
 .check-warnings li::before {
-    content: '⚠';
+    content: 'W';
     position: absolute;
     left: 0;
     color: var(--accent-warning);

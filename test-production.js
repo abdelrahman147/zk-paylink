@@ -13,7 +13,7 @@ async function testProduction() {
             results.passed++;
         } else {
             if (isWarning) {
-                console.log(`⚠ ${name}`);
+                console.log(`WARNING: ${name}`);
                 results.warnings++;
             } else {
                 console.log(`✗ ${name}`);
