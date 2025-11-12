@@ -59,32 +59,72 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Failed to initialize game:', error);
     }
     
-    const viewDocsBtn = document.getElementById('view-docs-btn');
-    if (viewDocsBtn) {
-        viewDocsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('View Docs button clicked');
-            const docsSection = document.getElementById('docs');
-            if (docsSection) {
-                docsSection.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                console.error('Docs section not found');
-            }
-        });
-    } else {
-        console.error('View Docs button not found!');
-    }
-    
-    const launchAppBtn = document.querySelector('.btn-primary:not([id])');
-    if (launchAppBtn && launchAppBtn.textContent.includes('Launch App')) {
-        launchAppBtn.addEventListener('click', () => {
-            const bridgeSection = document.getElementById('bridge-interface');
-            if (bridgeSection) {
-                bridgeSection.scrollIntoView({ behavior: 'smooth' });
-            }
-        });
-    }
+    setTimeout(() => {
+        const viewDocsBtn = document.getElementById('view-docs-btn');
+        if (viewDocsBtn) {
+            viewDocsBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('View Docs button clicked');
+                const docsSection = document.getElementById('docs');
+                if (docsSection) {
+                    docsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            };
+        }
+        
+        const launchAppBtn = document.querySelector('.btn-primary:not([id])');
+        if (launchAppBtn && launchAppBtn.textContent.includes('Launch App')) {
+            launchAppBtn.onclick = () => {
+                const bridgeSection = document.getElementById('bridge-interface');
+                if (bridgeSection) {
+                    bridgeSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            };
+        }
+        
+        const connectBtn = document.getElementById('connect-wallet-btn');
+        if (connectBtn && !connectBtn.onclick) {
+            connectBtn.onclick = async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Connect wallet button clicked');
+                if (typeof connectWallet === 'function') {
+                    try {
+                        connectBtn.disabled = true;
+                        connectBtn.textContent = 'Connecting...';
+                        await connectWallet();
+                    } catch (error) {
+                        console.error('Wallet connection error:', error);
+                        connectBtn.disabled = false;
+                        connectBtn.textContent = 'Connect Wallet';
+                    }
+                } else {
+                    alert('Wallet connection not available. Please refresh the page.');
+                }
+            };
+        }
+        
+        const testBtn = document.getElementById('run-tests-btn');
+        if (testBtn && !testBtn.onclick) {
+            testBtn.onclick = async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Run tests button clicked');
+                if (typeof runBridgeTests === 'function') {
+                    const iterations = prompt('How many tests to run?', '10000');
+                    if (iterations && !isNaN(iterations)) {
+                        const testCount = parseInt(iterations);
+                        if (testCount > 0) {
+                            await runBridgeTests(testCount);
+                        }
+                    }
+                } else {
+                    alert('Test suite not available. Please refresh the page.');
+                }
+            };
+        }
+    }, 1000);
 });
 
 
