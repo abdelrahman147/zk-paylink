@@ -42,12 +42,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const viewDocsBtn = document.getElementById('view-docs-btn');
     if (viewDocsBtn) {
-        viewDocsBtn.addEventListener('click', () => {
+        viewDocsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('View Docs button clicked');
             const docsSection = document.getElementById('docs');
             if (docsSection) {
                 docsSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                console.error('Docs section not found');
             }
         });
+    } else {
+        console.error('View Docs button not found!');
     }
     
     const launchAppBtn = document.querySelector('.btn-primary:not([id])');
@@ -147,13 +154,23 @@ function initBridgeUI() {
     const solanaRecipientInput = document.getElementById('solana-recipient');
     
     if (connectBtn) {
-        connectBtn.addEventListener('click', async () => {
+        connectBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Connect wallet button clicked');
             try {
+                connectBtn.disabled = true;
+                connectBtn.textContent = 'Connecting...';
                 await connectWallet();
             } catch (error) {
+                console.error('Wallet connection error:', error);
                 showBridgeStatus('Error connecting wallet: ' + error.message, 'error');
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Connect Wallet';
             }
         });
+    } else {
+        console.error('Connect wallet button not found!');
     }
     
     if (useWalletBtn) {
@@ -1737,17 +1754,29 @@ function updateTransactionList() {
 
 
 function showBridgeStatus(message, type = 'info') {
+    console.log(`[Bridge Status ${type}]:`, message);
+    
     const statusEl = document.getElementById('bridge-status');
-    if (!statusEl) return;
-    
-    statusEl.textContent = message;
-    statusEl.className = `bridge-status ${type}`;
-    statusEl.style.display = 'block';
-    
-    if (type === 'success' || type === 'error') {
+    if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.className = `bridge-status ${type}`;
+        statusEl.style.display = 'block';
+        
+        if (type === 'success' || type === 'error') {
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+    } else {
+        const alertDiv = document.createElement('div');
+        alertDiv.style.cssText = 'position:fixed;top:20px;right:20px;padding:1rem 1.5rem;background:var(--bg-tertiary);border:2px solid var(--accent-primary);border-radius:8px;z-index:10000;color:var(--text-primary);font-family:var(--font-mono);max-width:400px;';
+        alertDiv.className = `bridge-status-alert ${type}`;
+        alertDiv.textContent = message;
+        document.body.appendChild(alertDiv);
+        
         setTimeout(() => {
-            statusEl.style.display = 'none';
-        }, 5000);
+            alertDiv.remove();
+        }, type === 'error' ? 8000 : 5000);
     }
 }
 
