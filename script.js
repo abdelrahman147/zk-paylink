@@ -13,126 +13,143 @@
         var targetTimeout = null;
 
 
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof CONFIG === 'undefined') {
-        window.CONFIG = {
-            SOLANA_RPC: [
-                'https://api.mainnet-beta.solana.com',
-                'https://rpc.ankr.com/solana',
-                'https://solana.public-rpc.com'
-            ],
-            ZCASH_RPC: {
-                URL: '',
-                USER: '',
-                PASSWORD: ''
-            },
-            GOOGLE_SHEETS: {
-                SHEET_ID: '',
-                API_KEY: ''
-            }
-        };
-        console.log('CONFIG initialized with defaults');
-    }
-    
-    try {
-        initBridge();
-    } catch (error) {
-        console.error('Bridge initialization error:', error);
-    }
-    
-    initTerminalAnimation();
-    initScrollAnimations();
-    initTabSwitching();
-    initCopyButtons();
-    initStatsCounter();
-    initNavScroll();
-    initFlowSteps();
-    try {
-        initBridgeUI();
-    } catch (error) {
-        console.error('Failed to initialize bridge UI:', error);
-        setTimeout(initBridgeUI, 500);
-    }
-    
-    try {
-        initAPI();
-    } catch (error) {
-        console.error('Failed to initialize API:', error);
-    }
-    
-    try {
-        initGame();
-    } catch (error) {
-        console.error('Failed to initialize game:', error);
-    }
-    
-    setTimeout(() => {
-        const viewDocsBtn = document.getElementById('view-docs-btn');
-        if (viewDocsBtn) {
-            viewDocsBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('View Docs button clicked');
-                const docsSection = document.getElementById('docs');
-                if (docsSection) {
-                    docsSection.scrollIntoView({ behavior: 'smooth' });
-                }
-            };
-        }
-        
-        const launchAppBtn = document.querySelector('.btn-primary:not([id])');
-        if (launchAppBtn && launchAppBtn.textContent.includes('Launch App')) {
-            launchAppBtn.onclick = () => {
-                const bridgeSection = document.getElementById('bridge-interface');
-                if (bridgeSection) {
-                    bridgeSection.scrollIntoView({ behavior: 'smooth' });
-                }
-            };
-        }
-        
-        const connectBtn = document.getElementById('connect-wallet-btn');
-        if (connectBtn && !connectBtn.onclick) {
-            connectBtn.onclick = async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Connect wallet button clicked');
-                if (typeof connectWallet === 'function') {
-                    try {
-                        connectBtn.disabled = true;
-                        connectBtn.textContent = 'Connecting...';
-                        await connectWallet();
-                    } catch (error) {
-                        console.error('Wallet connection error:', error);
-                        connectBtn.disabled = false;
-                        connectBtn.textContent = 'Connect Wallet';
-                    }
-                } else {
-                    alert('Wallet connection not available. Please refresh the page.');
-                }
-            };
-        }
-        
-        const testBtn = document.getElementById('run-tests-btn');
-        if (testBtn && !testBtn.onclick) {
-            testBtn.onclick = async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Run tests button clicked');
-                if (typeof runBridgeTests === 'function') {
-                    const iterations = prompt('How many tests to run?', '10000');
-                    if (iterations && !isNaN(iterations)) {
-                        const testCount = parseInt(iterations);
-                        if (testCount > 0) {
-                            await runBridgeTests(testCount);
+        function attachAllButtonListeners() {
+            try {
+                var viewDocsBtn = document.getElementById('view-docs-btn');
+                if (viewDocsBtn) {
+                    viewDocsBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var docsSection = document.getElementById('docs');
+                        if (docsSection) {
+                            docsSection.scrollIntoView({ behavior: 'smooth' });
                         }
-                    }
-                } else {
-                    alert('Test suite not available. Please refresh the page.');
+                    });
                 }
-            };
+            } catch (e) { console.error('View Docs button error:', e); }
+            
+            try {
+                var launchAppBtn = document.getElementById('launch-app-btn');
+                if (!launchAppBtn) {
+                    launchAppBtn = document.querySelector('.btn-primary');
+                }
+                if (launchAppBtn && launchAppBtn.textContent && launchAppBtn.textContent.includes('Launch App')) {
+                    launchAppBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var bridgeSection = document.getElementById('bridge-interface');
+                        if (bridgeSection) {
+                            bridgeSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    });
+                }
+            } catch (e) { console.error('Launch App button error:', e); }
         }
-    }, 1000);
-});
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeApp();
+            });
+        } else {
+            initializeApp();
+        }
+        
+        function initializeApp() {
+            try {
+                if (typeof CONFIG === 'undefined') {
+                    window.CONFIG = {
+                        SOLANA_RPC: [
+                            'https://api.mainnet-beta.solana.com',
+                            'https://rpc.ankr.com/solana',
+                            'https://solana.public-rpc.com'
+                        ],
+                        ZCASH_RPC: {
+                            URL: '',
+                            USER: '',
+                            PASSWORD: ''
+                        },
+                        GOOGLE_SHEETS: {
+                            SHEET_ID: '',
+                            API_KEY: ''
+                        }
+                    };
+                    console.log('CONFIG initialized with defaults');
+                }
+            } catch (e) { console.error('CONFIG init error:', e); }
+            
+            attachAllButtonListeners();
+            
+            try {
+                if (typeof initTerminalAnimation === 'function') initTerminalAnimation();
+            } catch (e) { console.error('initTerminalAnimation error:', e); }
+            
+            try {
+                if (typeof initScrollAnimations === 'function') initScrollAnimations();
+            } catch (e) { console.error('initScrollAnimations error:', e); }
+            
+            try {
+                if (typeof initTabSwitching === 'function') initTabSwitching();
+            } catch (e) { console.error('initTabSwitching error:', e); }
+            
+            try {
+                if (typeof initCopyButtons === 'function') initCopyButtons();
+            } catch (e) { console.error('initCopyButtons error:', e); }
+            
+            try {
+                if (typeof initStatsCounter === 'function') initStatsCounter();
+            } catch (e) { console.error('initStatsCounter error:', e); }
+            
+            try {
+                if (typeof initNavScroll === 'function') initNavScroll();
+            } catch (e) { console.error('initNavScroll error:', e); }
+            
+            try {
+                if (typeof initFlowSteps === 'function') initFlowSteps();
+            } catch (e) { console.error('initFlowSteps error:', e); }
+            
+            try {
+                if (typeof initBridgeUI === 'function') {
+                    initBridgeUI();
+                } else {
+                    setTimeout(function() {
+                        if (typeof initBridgeUI === 'function') initBridgeUI();
+                        attachAllButtonListeners();
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('Failed to initialize bridge UI:', error);
+                setTimeout(function() {
+                    try {
+                        if (typeof initBridgeUI === 'function') initBridgeUI();
+                    } catch (e) { console.error('Retry initBridgeUI error:', e); }
+                    attachAllButtonListeners();
+                }, 500);
+            }
+            
+            try {
+                if (typeof initBridge === 'function') {
+                    initBridge();
+                }
+            } catch (error) {
+                console.error('Bridge initialization error:', error);
+            }
+            
+            try {
+                if (typeof initAPI === 'function') initAPI();
+            } catch (error) {
+                console.error('Failed to initialize API:', error);
+            }
+            
+            try {
+                if (typeof initGame === 'function') initGame();
+            } catch (error) {
+                console.error('Failed to initialize game:', error);
+            }
+            
+            setTimeout(attachAllButtonListeners, 100);
+            setTimeout(attachAllButtonListeners, 500);
+            setTimeout(attachAllButtonListeners, 1000);
+        }
 
 
 async function initBridge() {

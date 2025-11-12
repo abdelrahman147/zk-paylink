@@ -34,7 +34,7 @@
                 <a href="#game" class="nav-link">Game</a>
                 <a href="#api" class="nav-link">API</a>
                 <a href="#docs" class="nav-link">Docs</a>
-                <button class="btn-primary" onclick="document.getElementById('bridge-interface')?.scrollIntoView({behavior:'smooth'})">Launch App</button>
+                <button class="btn-primary" id="launch-app-btn">Launch App</button>
             </div>
         </div>
     </nav>
@@ -82,10 +82,10 @@
                         Zero-knowledge privacy. Seamless cross-chain.
                     </p>
                     <div class="hero-actions">
-                        <button class="btn-primary btn-large" id="connect-wallet-btn" onclick="if(typeof connectWallet==='function'){connectWallet().catch(e=>alert('Error: '+e.message));}else{alert('Please wait for page to load');}">Connect Wallet</button>
+                        <button class="btn-primary btn-large" id="connect-wallet-btn">Connect Wallet</button>
                         <button class="btn-secondary btn-large" id="bridge-btn" style="display:none;">Start Bridge</button>
-                        <button class="btn-secondary btn-large" id="view-docs-btn" onclick="document.getElementById('docs')?.scrollIntoView({behavior:'smooth'})">View Docs</button>
-                        <button class="btn-secondary btn-large" id="run-tests-btn" onclick="if(typeof runBridgeTests==='function'){const n=prompt('How many tests?','10000');if(n&&!isNaN(n))runBridgeTests(parseInt(n));}else{alert('Please wait for page to load');}">Run Stress Test</button>
+                        <button class="btn-secondary btn-large" id="view-docs-btn">View Docs</button>
+                        <button class="btn-secondary btn-large" id="run-tests-btn">Run Stress Test</button>
                     </div>
                     <div class="hero-stats" id="pool-stats">
                         <div class="stat">
@@ -454,7 +454,7 @@ Chain synchronization OK</code></pre>
                             <span class="info-value" id="game-time">0s</span>
                         </div>
                     </div>
-                    <button class="btn-primary btn-large" id="start-game-btn" onclick="if(typeof startGame==='function'){startGame().catch(e=>alert('Error: '+e.message));}else{alert('Please wait for page to load');}">Pay 0.01 SOL & Start Game</button>
+                    <button class="btn-primary btn-large" id="start-game-btn">Pay 0.01 SOL & Start Game</button>
                     <div id="game-status" class="game-status"></div>
                 </div>
                 <div class="game-area" id="game-area">
