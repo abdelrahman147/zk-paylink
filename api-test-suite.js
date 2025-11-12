@@ -1,7 +1,4 @@
-/**
- * API Test Suite
- * Tests all API endpoints 100 times and fixes errors
- */
+
 
 class APITestSuite {
     constructor(apiInstance) {
@@ -16,9 +13,7 @@ class APITestSuite {
         };
     }
     
-    /**
-     * Check if error is an RPC-related error
-     */
+    
     isRpcError(error) {
         if (!error) return false;
         const errorMsg = error.message || error.toString() || '';
@@ -54,22 +49,22 @@ class APITestSuite {
             this.results.totalTests++;
             
             try {
-                // Test 1: getStatus()
+                
                 await this.testGetStatus(i + 1);
                 
-                // Test 2: getPoolIntegrity()
+                
                 await this.testGetPoolIntegrity(i + 1);
                 
-                // Test 3: getRecentTransactions()
+                
                 await this.testGetRecentTransactions(i + 1);
                 
-                // Test 4: checkTransaction() with various inputs
+                
                 await this.testCheckTransaction(i + 1);
                 
-                // Test 5: sendPayment() - only if wallet connected
+                
                 if (this.api.bridge && this.api.bridge.solanaWallet) {
-                    // Skip actual payment test to avoid spending real SOL
-                    // Just test the method exists and can be called
+                    
+                    
                     await this.testSendPaymentMethod(i + 1);
                 }
                 
@@ -82,17 +77,17 @@ class APITestSuite {
                     console.log(`Progress: ${i + 1}/${iterations} (${passRate}% pass rate, ${rpcErrorRate}% RPC errors) - ${elapsed}s elapsed`);
                 }
             } catch (error) {
-                // Check if this is an RPC error
+                
                 if (this.isRpcError(error)) {
                     this.results.rpcErrors++;
-                    // Don't count RPC errors as failures if they're < 50% of total
+                    
                     const rpcErrorRate = (this.results.rpcErrors / this.results.totalTests) * 100;
                     if (rpcErrorRate < 50) {
-                        // Count as passed but log as warning
+                        
                         this.results.passed++;
                         this.results.warnings.push(`Iteration ${i + 1}: RPC error (not counted as failure): ${error.message}`);
                     } else {
-                        // RPC errors > 50%, count as failure
+                        
                         this.results.failed++;
                         this.results.errors.push({
                             iteration: i + 1,
@@ -102,7 +97,7 @@ class APITestSuite {
                         });
                     }
                 } else {
-                    // Non-RPC error, count as failure
+                    
                     this.results.failed++;
                     this.results.errors.push({
                         iteration: i + 1,
@@ -136,7 +131,7 @@ class APITestSuite {
 
             const result = await this.api.getStatus();
             
-            // Validate response structure
+            
             if (!result || typeof result !== 'object') {
                 throw new Error('getStatus() returned invalid response');
             }
@@ -157,7 +152,7 @@ class APITestSuite {
                 throw new Error('getStatus() missing or invalid timestamp');
             }
             
-            // Validate pool data types
+            
             if (typeof result.pool.balance !== 'number') {
                 throw new Error('Pool balance is not a number');
             }
@@ -180,22 +175,22 @@ class APITestSuite {
 
             const result = await this.api.getPoolIntegrity();
             
-            // Validate response structure
+            
             if (!result || typeof result !== 'object') {
                 throw new Error('getPoolIntegrity() returned invalid response');
             }
             
             if (result.success === false) {
-                // Check if it's an RPC error
+                
                 if (result.error && this.isRpcError({ message: result.error })) {
-                    // Re-throw as RPC error so it's handled properly
+                    
                     throw new Error(`RPC Error: ${result.error}`);
                 }
-                // This is okay if there's a non-RPC error, but log it
+                
                 if (result.error) {
                     this.results.warnings.push(`Iteration ${iteration}: Pool integrity check failed: ${result.error}`);
                 }
-                return true; // Don't fail the test, just warn
+                return true; 
             }
             
             if (!result.data || typeof result.data !== 'object') {
@@ -216,7 +211,7 @@ class APITestSuite {
             
             return true;
         } catch (error) {
-            // Re-throw to preserve RPC error status
+            
             throw error;
         }
     }
@@ -227,23 +222,23 @@ class APITestSuite {
                 throw new Error('API or bridge not initialized');
             }
 
-            // Test with different limits
+            
             const limits = [5, 10, 20, 50];
             const limit = limits[iteration % limits.length];
             
             const result = await this.api.getRecentTransactions(limit);
             
-            // Validate response structure
+            
             if (!result || typeof result !== 'object') {
                 throw new Error('getRecentTransactions() returned invalid response');
             }
             
             if (result.success === false) {
-                // This is okay if there's an error, but log it
+                
                 if (result.error) {
                     this.results.warnings.push(`Iteration ${iteration}: getRecentTransactions failed: ${result.error}`);
                 }
-                return true; // Don't fail the test, just warn
+                return true; 
             }
             
             if (!Array.isArray(result.data)) {
@@ -258,15 +253,15 @@ class APITestSuite {
                 throw new Error(`getRecentTransactions() count mismatch: ${result.count} vs ${result.data.length}`);
             }
             
-            // Note: It's okay if result.data.length is less than limit (fewer transactions available)
-            // But it should never be more than limit
+            
+            
             if (result.data.length > limit) {
                 throw new Error(`getRecentTransactions() returned more than limit: ${result.data.length} > ${limit}`);
             }
             
-            // Validate limit field exists
+            
             if (result.limit !== undefined && result.limit !== limit) {
-                // This is okay, just log it
+                
                 this.results.warnings.push(`Iteration ${iteration}: Limit mismatch: requested ${limit}, got ${result.limit}`);
             }
             
@@ -286,31 +281,31 @@ class APITestSuite {
                 throw new Error('API or bridge not initialized');
             }
 
-            // Test with various transaction IDs (some valid, some invalid)
+            
             const testTxids = [
                 'test-tx-' + Date.now(),
                 'zec_' + Math.random().toString(36).substring(7),
                 'sol_' + Math.random().toString(36).substring(7),
-                '', // Empty string
-                null // Null value
+                '', 
+                null 
             ];
             
             const txid = testTxids[iteration % testTxids.length];
             
             if (txid === null) {
-                // Skip null test - it will fail validation
+                
                 return true;
             }
             
             const result = await this.api.checkTransaction(txid);
             
-            // Validate response structure
+            
             if (!result || typeof result !== 'object') {
                 throw new Error('checkTransaction() returned invalid response');
             }
             
-            // It's okay if transaction is not found (success: false)
-            // Just validate the structure
+            
+            
             if (typeof result.success !== 'boolean') {
                 throw new Error('checkTransaction() success flag missing or invalid');
             }
@@ -339,18 +334,18 @@ class APITestSuite {
                 throw new Error('API or bridge not initialized');
             }
 
-            // Just verify the method exists and can handle validation
-            // Don't actually send payments to avoid spending real SOL
+            
+            
             if (typeof this.api.sendPayment !== 'function') {
                 throw new Error('sendPayment() method not found');
             }
             
-            // Test with invalid parameters (should throw error)
+            
             try {
                 await this.api.sendPayment(-1, 'invalid-address');
                 throw new Error('sendPayment() should have thrown error for invalid amount');
             } catch (error) {
-                // Expected to throw - this is good
+                
                 if (!error.message) {
                     throw new Error('sendPayment() error message missing');
                 }
@@ -378,7 +373,7 @@ class APITestSuite {
         console.log(`Total Time:      ${totalTime}s`);
         console.log(`Avg Time/Test:   ${(totalTime / this.results.totalTests).toFixed(3)}s`);
         
-        // Success criteria: RPC errors < 50% and API failures = 0
+        
         const isSuccess = rpcErrorRate < 50 && this.results.failed === 0;
         console.log(`\nStatus:          ${isSuccess ? 'SUCCESS' : 'NEEDS IMPROVEMENT'}`);
         if (!isSuccess) {
@@ -414,7 +409,7 @@ class APITestSuite {
     }
 }
 
-// Export for use
+
 if (typeof window !== 'undefined') {
     window.APITestSuite = APITestSuite;
 }

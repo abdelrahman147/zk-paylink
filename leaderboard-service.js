@@ -1,11 +1,7 @@
-/**
- * Leaderboard Service - Client Side
- * Communicates with backend API to submit and retrieve scores
- * Includes anti-cheat measures
- */
+
 
 class LeaderboardService {
-    constructor(apiUrl = 'http://localhost:3001') {
+    constructor(apiUrl = 'http:
         this.apiUrl = apiUrl;
         this.isOnline = false;
         this.checkConnection();
@@ -24,9 +20,7 @@ class LeaderboardService {
         }
     }
     
-    /**
-     * Generate a secure hash for score submission
-     */
+    
     async generateScoreHash(wallet, score, time, signature) {
         const data = `${wallet}-${score}-${time}-${signature}-${Date.now()}`;
         const encoder = new TextEncoder();
@@ -36,9 +30,7 @@ class LeaderboardService {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
     
-    /**
-     * Submit score to leaderboard
-     */
+    
     async submitScore(wallet, score, time, signature, difficulty = 1) {
         if (!this.isOnline) {
             await this.checkConnection();
@@ -70,15 +62,13 @@ class LeaderboardService {
             return result;
         } catch (error) {
             console.error('Failed to submit score:', error);
-            // Cache locally if API is down
+            
             this.cacheScoreLocally(wallet, score, time);
             throw error;
         }
     }
     
-    /**
-     * Get leaderboard
-     */
+    
     async getLeaderboard(limit = 50) {
         if (!this.isOnline) {
             await this.checkConnection();
@@ -96,9 +86,7 @@ class LeaderboardService {
         }
     }
     
-    /**
-     * Get user's best score
-     */
+    
     async getUserBestScore(wallet) {
         if (!this.isOnline) {
             await this.checkConnection();
@@ -116,9 +104,7 @@ class LeaderboardService {
         }
     }
     
-    /**
-     * Cache score locally if API is down
-     */
+    
     cacheScoreLocally(wallet, score, time) {
         try {
             const cached = localStorage.getItem('cachedScores');
@@ -131,7 +117,7 @@ class LeaderboardService {
     }
 }
 
-// Export for use
+
 if (typeof window !== 'undefined') {
     window.LeaderboardService = LeaderboardService;
 }

@@ -2,119 +2,147 @@
 
 Cross-chain payment protocol enabling private transactions from Zcash to Solana using zero-knowledge proofs.
 
-## Features
+## Architecture Flow
 
-- Private cross-chain transactions using zk-SNARKs
-- Solana integration with SPL token support
-- Trustless bridge architecture
-- Mini game with leaderboard
-- Anti-cheat protection
-- Google Sheets leaderboard integration
+```
+┌─────────────────┐
+│   Zcash Chain   │
+│  Shielded Pool  │
+└────────┬────────┘
+         │
+         │ Deposit ZEC
+         │ Generate zk-SNARK Proof
+         ▼
+┌─────────────────────────────────┐
+│     Bridge Service Layer        │
+│  ┌───────────────────────────┐  │
+│  │  Proof Verification       │  │
+│  │  Pool Balance Tracking    │  │
+│  │  Transaction Management   │  │
+│  └───────────────────────────┘  │
+└────────┬────────────────────────┘
+         │
+         │ Verify Proof
+         │ Mint Equivalent Value
+         ▼
+┌─────────────────┐
+│  Solana Chain   │
+│  SPL Tokens     │
+└─────────────────┘
+```
 
-## Setup
+## Technical Implementation
 
-### Prerequisites
+### Core Components
 
-- Node.js 16+ (for backend API)
-- Modern web browser with Phantom wallet extension
-- Zcash node (optional, for local testing)
+**Bridge Service (bridge-service.js)**
+- Manages cross-chain state synchronization
+- Handles Zcash RPC communication for shielded pool operations
+- Integrates with Solana Web3 for transaction creation
+- Implements pool balance tracking with precision handling
+- Provides transaction verification and confirmation polling
 
-### Installation
+**API Service (api-service.js)**
+- Exposes protocol operations through standardized interface
+- Validates all inputs and handles errors gracefully
+- Manages Solana transaction signing and confirmation
+- Provides status monitoring and transaction history
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Configure Google Sheets API (see Leaderboard Setup)
-4. Open `index.html` in a web browser
+**Game System (mini-game.js)**
+- Implements pay-to-play mechanics with Solana payments
+- Tracks game state and scoring algorithms
+- Integrates with leaderboard for score submission
+
+**Leaderboard (leaderboard-sheets.js)**
+- Stores game scores in Google Sheets via REST API
+- Implements retry logic for rate limit handling
+- Provides ranking and user score retrieval
+
+### Data Flow
+
+1. **Deposit Phase**
+   - User sends ZEC to shielded pool address
+   - Bridge service monitors Zcash blockchain via RPC
+   - Transaction detected and validated
+
+2. **Proof Generation**
+   - Zero-knowledge proof created proving deposit ownership
+   - Proof contains hashed amount and recipient information
+   - Private inputs remain hidden (sender identity, exact amount)
+
+3. **Verification Phase**
+   - Proof verified on-chain via Solana program
+   - Pool balance validated against calculated deposits
+   - Transaction consistency checked
+
+4. **Minting Phase**
+   - Equivalent value minted as SPL tokens on Solana
+   - Recipient receives tokens in their wallet
+   - Transaction recorded in bridge state
+
+### Improvements Over Standard Bridges
+
+**Privacy Enhancement**
+- Zero-knowledge proofs prevent transaction graph analysis
+- Shielded pool obscures individual transaction amounts
+- No linkability between Zcash and Solana addresses
+
+**Trust Minimization**
+- On-chain verification eliminates need for trusted operators
+- Smart contract validation ensures correctness
+- Transparent pool balance tracking
+
+**Efficiency Gains**
+- Solana's high throughput enables fast finality
+- Batch processing capabilities for multiple transactions
+- Optimized RPC endpoint rotation for reliability
+
+**Cost Optimization**
+- Minimal transaction fees on Solana network
+- Reduced gas costs compared to Ethereum-based bridges
+- Efficient proof verification algorithms
 
 ## Configuration
 
-### Google Sheets Leaderboard Setup
-
-1. Create a new Google Sheet
-2. Add headers in row 1: Timestamp, Wallet, Score, Time, ScorePerSecond, Difficulty, Signature, Hash
-3. Enable Google Sheets API in Google Cloud Console
-4. Create an API key with Sheets API access
-5. Update `script.js` with your Sheet ID and API key:
+Create `config.js` from `config.example.js`:
 
 ```javascript
-const SHEET_ID = 'your-sheet-id';
-const API_KEY = 'your-api-key';
-```
-
-### Solana RPC Configuration
-
-Default public RPC endpoints are used. For production, configure your own RPC endpoints in `script.js`:
-
-```javascript
-const solanaRpcUrls = [
-    'https://api.mainnet-beta.solana.com',
-    'https://rpc.ankr.com/solana',
-    'https://solana.public-rpc.com'
-];
-```
-
-### Zcash RPC Configuration
-
-Configure Zcash RPC in `script.js`:
-
-```javascript
-zcashRpcUrl: 'http://localhost:8232',
-zcashRpcUser: 'your-rpc-user',
-zcashRpcPassword: 'your-rpc-password'
-```
-
-## Usage
-
-### Bridge ZEC to Solana
-
-1. Connect your Solana wallet (Phantom)
-2. Enter ZEC amount and recipient address
-3. Click "Bridge ZEC → SOL"
-4. Confirm transaction in wallet
-
-### Mini Game
-
-1. Connect Solana wallet
-2. Click "Pay 0.01 SOL & Start Game"
-3. Click targets to score points
-4. Avoid clicking background (loses 1 life)
-5. Scores are automatically submitted to leaderboard
-
-### API
-
-The protocol exposes a JavaScript API:
-
-```javascript
-const api = new ProtocolAPI();
-api.init(bridge);
-
-const status = await api.getStatus();
-const result = await api.bridgeZecToSolana(1.0, 'recipient-address');
+const CONFIG = {
+    GOOGLE_SHEETS: {
+        SHEET_ID: 'your-sheet-id',
+        API_KEY: 'your-api-key'
+    },
+    SOLANA_RPC: [
+        'https://api.mainnet-beta.solana.com',
+        'https://rpc.ankr.com/solana'
+    ],
+    ZCASH_RPC: {
+        URL: 'your-zcash-rpc-url',
+        USER: 'rpc-username',
+        PASSWORD: 'rpc-password'
+    }
+};
 ```
 
 ## Project Structure
 
-- `bridge-service.js` - Core bridge logic
-- `api-service.js` - Protocol API
-- `mini-game.js` - Game implementation
-- `anti-cheat.js` - Anti-cheat detection
-- `leaderboard-sheets.js` - Google Sheets integration
-- `script.js` - Main application logic
+- `bridge-service.js` - Core bridge logic and state management
+- `api-service.js` - Protocol API interface
+- `mini-game.js` - Game implementation with payment integration
+- `anti-cheat.js` - Client-side validation and detection
+- `leaderboard-sheets.js` - Google Sheets API integration
+- `script.js` - Application orchestration
 - `index.html` - User interface
 - `styles.css` - Styling
 
 ## Security
 
-- All transactions verified on-chain
-- Zero-knowledge proofs for privacy
-- Anti-cheat system prevents manipulation
-- Server-side leaderboard validation
-- No private keys stored
+- All transactions verified on-chain via smart contracts
+- Zero-knowledge proofs ensure privacy without revealing sensitive data
+- Anti-cheat system prevents score manipulation
+- Leaderboard validation prevents duplicate submissions
+- No private keys stored or transmitted
 
 ## License
 
 MIT License
-
-## Support
-
-For issues and questions, open an issue on GitHub.
