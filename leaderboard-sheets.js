@@ -35,13 +35,20 @@ class LeaderboardSheets {
             });
             
             if (!response.ok) {
-                throw new Error(`Failed to submit score: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                if (response.status === 429 && this.retryCount < this.maxRetries) {
+                    this.retryCount++;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * this.retryCount));
+                    return this.submitScore(wallet, score, time, signature, difficulty);
+                }
+                throw new Error(`Failed to submit score: ${response.statusText} - ${JSON.stringify(errorData)}`);
             }
             
+            this.retryCount = 0;
             return { success: true };
         } catch (error) {
             console.error('Failed to submit score to Google Sheets:', error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
     

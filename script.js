@@ -746,7 +746,7 @@ async function loadLeaderboard() {
     if (!leaderboardService) {
         const container = document.getElementById('leaderboard-container');
         if (container) {
-            container.innerHTML = '<p style="color: var(--text-secondary);">Leaderboard API not available. Start the backend server with: npm start</p>';
+            container.innerHTML = '<p style="color: var(--text-secondary);">Configure Google Sheets in config.js to enable leaderboard</p>';
         }
         return;
     }

@@ -287,17 +287,40 @@ class ProtocolAPI {
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = senderPubkey;
 
-            const signed = await window.solana.signTransaction(transaction);
-            const signature = await this.bridge.solanaConnection.sendRawTransaction(signed.serialize(), {
-                skipPreflight: false,
-                maxRetries: 3
-            });
+            let signed, signature, confirmation;
             
-            const confirmation = await this.bridge.solanaConnection.confirmTransaction({
-                signature: signature,
-                blockhash: blockhash,
-                lastValidBlockHeight: lastValidBlockHeight
-            }, 'confirmed');
+            try {
+                if (window.solana && window.solana.signAndSendTransaction) {
+                    const result = await window.solana.signAndSendTransaction(transaction);
+                    signature = result.signature;
+                } else if (window.solana && window.solana.signTransaction) {
+                    signed = await window.solana.signTransaction(transaction);
+                    signature = await this.bridge.solanaConnection.sendRawTransaction(signed.serialize(), {
+                        skipPreflight: false,
+                        maxRetries: 3
+                    });
+                } else {
+                    throw new Error('Phantom wallet not available');
+                }
+            } catch (signError) {
+                if (signError.code === 4001) {
+                    throw new Error('Transaction rejected by user');
+                }
+                throw new Error(`Transaction signing failed: ${signError.message}`);
+            }
+            
+            try {
+                confirmation = await Promise.race([
+                    this.bridge.solanaConnection.confirmTransaction({
+                        signature: signature,
+                        blockhash: blockhash,
+                        lastValidBlockHeight: lastValidBlockHeight
+                    }, 'confirmed'),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Transaction confirmation timeout')), 30000))
+                ]);
+            } catch (confirmError) {
+                throw new Error(`Transaction confirmation failed: ${confirmError.message}`);
+            }
 
             if (confirmation.value.err) {
                 throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);

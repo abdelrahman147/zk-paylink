@@ -9,7 +9,7 @@ const CONFIG = {
         'https://solana.public-rpc.com'
     ],
     ZCASH_RPC: {
-        URL: 'http://localhost:8232',
+        URL: '',
         USER: '',
         PASSWORD: ''
     }
