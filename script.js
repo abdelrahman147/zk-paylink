@@ -41,8 +41,8 @@ async function initBridge() {
                 solanaRpcUrls: solanaRpcUrls, 
                 solanaRpcUrl: solanaRpcUrls[0], 
                 zcashRpcUrl: 'http:
-                zcashRpcUser: '', 
-                zcashRpcPassword: '',
+                zcashRpcUser: CONFIG && CONFIG.ZCASH_RPC ? CONFIG.ZCASH_RPC.USER : '', 
+                zcashRpcPassword: CONFIG && CONFIG.ZCASH_RPC ? CONFIG.ZCASH_RPC.PASSWORD : '',
                 shieldedPoolAddress: null 
             });
             
