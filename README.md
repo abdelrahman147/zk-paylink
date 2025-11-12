@@ -265,6 +265,12 @@ const CONFIG = {
 - Leaderboard validation prevents duplicate submissions
 - No private keys stored or transmitted
 
+## Links
+
+- Website: http://zecit.online/
+- X (Twitter): https://x.com/Zecitsolana
+- GitHub: https://github.com/abdelrahman147/zcashhh
+
 ## License
 
 MIT License

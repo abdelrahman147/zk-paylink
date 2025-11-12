@@ -283,24 +283,45 @@ class ProtocolAPI {
                 );
             }
 
-            const { blockhash, lastValidBlockHeight } = await this.bridge.solanaConnection.getLatestBlockhash('confirmed');
+            if (!this.bridge.solanaConnection) {
+                throw new Error('Solana connection not established');
+            }
+            
+            const { blockhash, lastValidBlockHeight } = await Promise.race([
+                this.bridge.solanaConnection.getLatestBlockhash('confirmed'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Blockhash request timeout')), 10000))
+            ]);
+            
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = senderPubkey;
 
             let signed, signature, confirmation;
             
             try {
-                if (window.solana && window.solana.signAndSendTransaction) {
-                    const result = await window.solana.signAndSendTransaction(transaction);
+                if (!window.solana || !window.solana.isPhantom) {
+                    throw new Error('Phantom wallet not available');
+                }
+                
+                if (window.solana.signAndSendTransaction) {
+                    const result = await window.solana.signAndSendTransaction({
+                        transaction: transaction,
+                        options: {
+                            skipPreflight: false,
+                            maxRetries: 3
+                        }
+                    });
                     signature = result.signature;
-                } else if (window.solana && window.solana.signTransaction) {
+                } else if (window.solana.signTransaction) {
                     signed = await window.solana.signTransaction(transaction);
+                    if (!signed) {
+                        throw new Error('Transaction signing returned null');
+                    }
                     signature = await this.bridge.solanaConnection.sendRawTransaction(signed.serialize(), {
                         skipPreflight: false,
                         maxRetries: 3
                     });
                 } else {
-                    throw new Error('Phantom wallet not available');
+                    throw new Error('Phantom wallet signing methods not available');
                 }
             } catch (signError) {
                 if (signError.code === 4001) {

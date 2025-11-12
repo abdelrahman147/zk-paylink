@@ -94,16 +94,42 @@ class ZcashSolanaBridge {
             throw new Error('Solana wallet not found. Please install Phantom wallet.');
         }
         
+        if (!window.solana.isPhantom) {
+            throw new Error('Phantom wallet required');
+        }
+        
         try {
-            const resp = await window.solana.connect();
+            const resp = await window.solana.connect({ onlyIfTrusted: false });
+            if (!resp || !resp.publicKey) {
+                throw new Error('Failed to get wallet address');
+            }
+            
             this.solanaWallet = resp.publicKey.toString();
             
-            
             await this.loadSolanaWeb3();
+            
+            if (!this.solanaRpcUrl) {
+                throw new Error('Solana RPC URL not configured');
+            }
+            
             this.solanaConnection = new this.SolanaWeb3.Connection(this.solanaRpcUrl, 'confirmed');
+            
+            try {
+                await this.solanaConnection.getVersion();
+            } catch (rpcError) {
+                if (this.solanaRpcUrls && this.solanaRpcUrls.length > 1) {
+                    await this.switchSolanaRpcEndpoint();
+                    this.solanaConnection = new this.SolanaWeb3.Connection(this.solanaRpcUrl, 'confirmed');
+                } else {
+                    throw new Error('Solana RPC connection failed');
+                }
+            }
             
             return this.solanaWallet;
         } catch (err) {
+            if (err.code === 4001) {
+                throw new Error('Connection rejected by user');
+            }
             console.error('Solana wallet connection error:', err);
             throw err;
         }
