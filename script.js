@@ -2534,7 +2534,23 @@ document.querySelectorAll('button').forEach(button => {
 });
 
 
-console.log('%cZCASH → SOLANA Protocol', 'color: #00d4ff; font-size: 20px; font-weight: bold;');
-console.log('%cPrivate Cross-Chain Payments', 'color: #00ff88; font-size: 14px;');
-console.log('%cBuilt with privacy in mind', 'color: #8b949e; font-size: 12px;');
+        console.log('%cZCASH → SOLANA Protocol', 'color: #00d4ff; font-size: 20px; font-weight: bold;');
+        console.log('%cPrivate Cross-Chain Payments', 'color: #00ff88; font-size: 14px;');
+        console.log('%cBuilt with privacy in mind', 'color: #8b949e; font-size: 12px;');
+        
+    } catch (globalError) {
+        console.error('CRITICAL ERROR in script.js:', globalError);
+        console.error('Stack:', globalError.stack);
+        
+        setTimeout(function() {
+            try {
+                if (typeof initBridgeUI === 'function') {
+                    initBridgeUI();
+                }
+            } catch (e) {
+                console.error('Recovery initBridgeUI failed:', e);
+            }
+        }, 2000);
+    }
+})();
 
