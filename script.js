@@ -30,7 +30,7 @@ async function initBridge() {
     try {
         
         
-        const solanaRpcUrls = [
+        const solanaRpcUrls = CONFIG && CONFIG.SOLANA_RPC ? CONFIG.SOLANA_RPC : [
             'https:
             'https:
             'https:
@@ -40,7 +40,7 @@ async function initBridge() {
             bridge = new ZcashSolanaBridge({
                 solanaRpcUrls: solanaRpcUrls, 
                 solanaRpcUrl: solanaRpcUrls[0], 
-                zcashRpcUrl: 'http:
+                zcashRpcUrl: CONFIG && CONFIG.ZCASH_RPC ? CONFIG.ZCASH_RPC.URL : '',
                 zcashRpcUser: CONFIG && CONFIG.ZCASH_RPC ? CONFIG.ZCASH_RPC.USER : '', 
                 zcashRpcPassword: CONFIG && CONFIG.ZCASH_RPC ? CONFIG.ZCASH_RPC.PASSWORD : '',
                 shieldedPoolAddress: null 
