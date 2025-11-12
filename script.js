@@ -40,10 +40,24 @@ document.addEventListener('DOMContentLoaded', function() {
     initStatsCounter();
     initNavScroll();
     initFlowSteps();
-    initBridgeUI();
+    try {
+        initBridgeUI();
+    } catch (error) {
+        console.error('Failed to initialize bridge UI:', error);
+        setTimeout(initBridgeUI, 500);
+    }
     
-    initAPI();
-    initGame();
+    try {
+        initAPI();
+    } catch (error) {
+        console.error('Failed to initialize API:', error);
+    }
+    
+    try {
+        initGame();
+    } catch (error) {
+        console.error('Failed to initialize game:', error);
+    }
     
     const viewDocsBtn = document.getElementById('view-docs-btn');
     if (viewDocsBtn) {
@@ -145,8 +159,14 @@ async function initBridge() {
 
 
 function initBridgeUI() {
-    if (!document.getElementById('connect-wallet-btn')) {
-        console.error('Button elements not found - DOM may not be ready');
+    try {
+        if (!document.getElementById('connect-wallet-btn')) {
+            console.error('Button elements not found - DOM may not be ready');
+            setTimeout(initBridgeUI, 100);
+            return;
+        }
+    } catch (error) {
+        console.error('Error in initBridgeUI check:', error);
         setTimeout(initBridgeUI, 100);
         return;
     }
