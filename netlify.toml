@@ -30,4 +30,9 @@
   to = "/.netlify/functions/leaderboard"
   status = 200
 
+[[redirects]]
+  from = "/api/sheets/*"
+  to = "/.netlify/functions/sheets-proxy"
+  status = 200
+
 

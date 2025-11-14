@@ -1,0 +1,40 @@
+================================================================================
+NETLIFY ENVIRONMENT VARIABLES SETUP
+================================================================================
+
+To enable Google Sheets leaderboard on production, add these environment 
+variables in your Netlify dashboard:
+
+Go to: Site settings > Environment variables > Add a variable
+
+Add the following from your service account JSON file 
+(gen-lang-client-0795253847-40a86032d27e.json):
+
+1. GOOGLE_PROJECT_ID
+   Value: gen-lang-client-0795253847
+
+2. GOOGLE_PRIVATE_KEY_ID
+   Value: 40a86032d27e4d82337cd9b4ad1c143d0e1c67c7
+
+3. GOOGLE_PRIVATE_KEY
+   Value: (the entire private_key value, including -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY-----)
+   
+4. GOOGLE_CLIENT_EMAIL
+   Value: meshnodelicense-185@gen-lang-client-0795253847.iam.gserviceaccount.com
+
+5. GOOGLE_CLIENT_ID
+   Value: 109073837544680452976
+
+6. GOOGLE_CERT_URL
+   Value: https://www.googleapis.com/robot/v1/metadata/x509/meshnodelicense-185%40gen-lang-client-0795253847.iam.gserviceaccount.com
+
+================================================================================
+
+IMPORTANT NOTES:
+- The GOOGLE_PRIVATE_KEY is multi-line. Netlify will handle this correctly.
+- Make sure the Google Sheet (1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8) 
+  is shared with the service account email as "Editor"
+- After adding variables, redeploy the site
+
+================================================================================
+
