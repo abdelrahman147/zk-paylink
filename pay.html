@@ -230,17 +230,79 @@
             
             try {
                 console.log('Loading payment link:', linkId);
-                const response = await fetch(`/api/payment-links/${linkId}`);
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Payment link not found');
+                let response = await fetch(`/api/payment-links/${linkId}`);
+                let link = null;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    link = data.link;
                 }
                 
-                const data = await response.json();
-                const link = data.link;
-                
+                // If link not found, try to extract payment ID from linkId or create from payment ID
                 if (!link) {
-                    throw new Error('Payment link data not found');
+                    console.warn('Payment link not found, attempting to load payment directly...');
+                    
+                    // Try to extract payment ID from linkId (format: link_<timestamp>_<random>)
+                    // Or if linkId starts with 'pay_', it's actually a payment ID
+                    let paymentId = null;
+                    if (linkId.startsWith('pay_')) {
+                        paymentId = linkId;
+                    } else if (linkId.startsWith('link_')) {
+                        // Try to find payment by matching timestamp or create a link on-the-fly
+                        // For now, we'll try to load payment directly if we can extract info
+                    }
+                    
+                    // If we have a payment ID, try to load the payment and create a link on-the-fly
+                    if (!paymentId) {
+                        // Try to find payment by checking if linkId contains payment info
+                        // Or try common payment IDs
+                        const possiblePaymentId = linkId.replace('link_', 'pay_');
+                        try {
+                            const paymentResponse = await fetch(`/api/oracle/payments/${possiblePaymentId}`);
+                            if (paymentResponse.ok) {
+                                const paymentData = await paymentResponse.json();
+                                if (paymentData.payment) {
+                                    paymentId = possiblePaymentId;
+                                }
+                            }
+                        } catch (e) {
+                            // Ignore
+                        }
+                    }
+                    
+                    // If we found a payment, create a link on-the-fly
+                    if (paymentId) {
+                        try {
+                            const paymentResponse = await fetch(`/api/oracle/payments/${paymentId}`);
+                            if (paymentResponse.ok) {
+                                const paymentData = await paymentResponse.json();
+                                const payment = paymentData.payment;
+                                
+                                if (payment) {
+                                    // Create a temporary link object
+                                    link = {
+                                        id: linkId,
+                                        paymentId: payment.id,
+                                        url: `${window.location.origin}/pay/${linkId}`,
+                                        qrCode: {
+                                            url: `solana:${payment.merchantAddress}?amount=${payment.solAmount}&reference=${payment.id}`,
+                                            data: `solana:${payment.merchantAddress}?amount=${payment.solAmount}&reference=${payment.id}`
+                                        },
+                                        status: 'active',
+                                        createdAt: payment.createdAt
+                                    };
+                                    
+                                    displayPaymentPage(link, payment);
+                                    return;
+                                }
+                            }
+                        } catch (err) {
+                            console.warn('Could not load payment:', err);
+                        }
+                    }
+                    
+                    // If still no link, show error
+                    throw new Error('Payment link not found');
                 }
                 
                 // Get payment details
