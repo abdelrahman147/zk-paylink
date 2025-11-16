@@ -595,7 +595,64 @@ app.post('/api/checkout', async (req, res) => {
         </div>
     </footer>
 
-    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+    <!-- Solana Web3.js SDK with multiple CDN fallbacks (latest version) -->
+    <script>
+        (function() {
+            // Latest stable version with fallbacks
+            const cdnUrls = [
+                'https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js',
+                'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.8/lib/index.iife.min.js',
+                'https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js',
+                'https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js'
+            ];
+            
+            let currentIndex = 0;
+            
+            function tryLoadSolana() {
+                // Check if already loaded
+                if (typeof window.SolanaWeb3 !== 'undefined') {
+                    console.log('✅ SolanaWeb3 already loaded');
+                    return;
+                }
+                
+                if (currentIndex >= cdnUrls.length) {
+                    console.error('❌ All SolanaWeb3 CDNs failed. Some features may not work.');
+                    // Create a minimal fallback
+                    window.SolanaWeb3 = {
+                        Connection: function() { throw new Error('Solana SDK not loaded'); },
+                        PublicKey: function() { throw new Error('Solana SDK not loaded'); }
+                    };
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = cdnUrls[currentIndex];
+                script.async = false; // Load synchronously for critical dependency
+                script.crossOrigin = 'anonymous';
+                
+                script.onload = function() {
+                    if (typeof window.SolanaWeb3 !== 'undefined') {
+                        console.log(`✅ SolanaWeb3 loaded successfully from CDN ${currentIndex + 1}`);
+                    } else {
+                        console.warn(`⚠️ Script loaded but SolanaWeb3 not defined, trying next CDN...`);
+                        currentIndex++;
+                        setTimeout(tryLoadSolana, 500);
+                    }
+                };
+                
+                script.onerror = function() {
+                    console.warn(`⚠️ CDN ${currentIndex + 1} failed, trying next...`);
+                    currentIndex++;
+                    setTimeout(tryLoadSolana, 500);
+                };
+                
+                document.head.appendChild(script);
+            }
+            
+            // Start loading immediately
+            tryLoadSolana();
+        })();
+    </script>
     <script src="config.js" onerror="console.log('config.js not found, using defaults')"></script>
     <script src="bridge-service.js"></script>
         <script src="api-service.js"></script>
@@ -604,7 +661,6 @@ app.post('/api/checkout', async (req, res) => {
         <script src="anti-cheat.js"></script>
     <script src="payment-storage.js"></script>
     <script src="zec-oracle.js"></script>
-    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="solana-pay-integration.js"></script>
     <script src="webhook-system.js"></script>
