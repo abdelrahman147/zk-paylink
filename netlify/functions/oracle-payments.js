@@ -127,7 +127,31 @@ exports.handler = async (event, context) => {
                 };
             } else {
                 // Get all payments
-                const allPayments = Array.from(payments.values());
+                // Try to load from Google Sheets if memory is empty
+                let allPayments = Array.from(payments.values());
+                
+                if (allPayments.length === 0) {
+                    // Try loading from Google Sheets
+                    try {
+                        const sheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
+                        const sheetName = 'payment';
+                        const sheetsUrl = `https://zecit.online/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
+                        const sheetsResponse = await fetch(sheetsUrl);
+                        
+                        if (sheetsResponse.ok) {
+                            const sheetsData = await sheetsResponse.json();
+                            allPayments = sheetsData.payments || [];
+                            
+                            // Cache in memory
+                            allPayments.forEach(payment => {
+                                payments.set(payment.id, payment);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Failed to load payments from Google Sheets:', error);
+                    }
+                }
+                
                 return {
                     statusCode: 200,
                     headers: {

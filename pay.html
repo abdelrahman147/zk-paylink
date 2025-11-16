@@ -248,25 +248,51 @@
                     if (linkId.startsWith('pay_')) {
                         paymentId = linkId;
                     } else if (linkId.startsWith('link_')) {
-                        // Try to find payment by matching timestamp or create a link on-the-fly
-                        // For now, we'll try to load payment directly if we can extract info
-                    }
-                    
-                    // If we have a payment ID, try to load the payment and create a link on-the-fly
-                    if (!paymentId) {
-                        // Try to find payment by checking if linkId contains payment info
-                        // Or try common payment IDs
-                        const possiblePaymentId = linkId.replace('link_', 'pay_');
-                        try {
-                            const paymentResponse = await fetch(`/api/oracle/payments/${possiblePaymentId}`);
-                            if (paymentResponse.ok) {
-                                const paymentData = await paymentResponse.json();
-                                if (paymentData.payment) {
-                                    paymentId = possiblePaymentId;
+                        // Extract timestamp from linkId: link_<timestamp>_<random>
+                        const linkParts = linkId.split('_');
+                        if (linkParts.length >= 2) {
+                            const timestamp = linkParts[1];
+                            
+                            // Try to find payment by loading all payments and matching timestamp
+                            try {
+                                const allPaymentsResponse = await fetch('/api/oracle/payments');
+                                if (allPaymentsResponse.ok) {
+                                    const allPaymentsData = await allPaymentsResponse.json();
+                                    const allPayments = allPaymentsData.payments || [];
+                                    
+                                    // Find payment with matching timestamp (payment ID format: pay_<timestamp>_<random>)
+                                    const matchingPayment = allPayments.find(p => {
+                                        if (p.id && p.id.startsWith('pay_')) {
+                                            const paymentParts = p.id.split('_');
+                                            return paymentParts.length >= 2 && paymentParts[1] === timestamp;
+                                        }
+                                        return false;
+                                    });
+                                    
+                                    if (matchingPayment) {
+                                        paymentId = matchingPayment.id;
+                                        console.log(`Found payment by timestamp: ${paymentId}`);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Could not load all payments:', e);
+                            }
+                            
+                            // Fallback: try direct conversion (might work if random suffix matches)
+                            if (!paymentId) {
+                                const possiblePaymentId = linkId.replace('link_', 'pay_');
+                                try {
+                                    const paymentResponse = await fetch(`/api/oracle/payments/${possiblePaymentId}`);
+                                    if (paymentResponse.ok) {
+                                        const paymentData = await paymentResponse.json();
+                                        if (paymentData.payment) {
+                                            paymentId = possiblePaymentId;
+                                        }
+                                    }
+                                } catch (e) {
+                                    // Ignore
                                 }
                             }
-                        } catch (e) {
-                            // Ignore
                         }
                     }
                     
@@ -279,14 +305,29 @@
                                 const payment = paymentData.payment;
                                 
                                 if (payment) {
+                                    // Generate QR code URL based on token type
+                                    let qrUrl = `solana:${payment.merchantAddress}?amount=${payment.solAmount}`;
+                                    if (payment.token && payment.token !== 'SOL') {
+                                        const tokenMints = {
+                                            'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                                            'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+                                            'EURC': 'HzwqbKZw8HxNE6WvK5kfvm6hrKjXUYkLRPvXjrao1HGk'
+                                        };
+                                        const tokenMint = tokenMints[payment.token];
+                                        if (tokenMint) {
+                                            qrUrl += `&spl-token=${tokenMint}`;
+                                        }
+                                    }
+                                    qrUrl += `&reference=${payment.id}`;
+                                    
                                     // Create a temporary link object
                                     link = {
                                         id: linkId,
                                         paymentId: payment.id,
                                         url: `${window.location.origin}/pay/${linkId}`,
                                         qrCode: {
-                                            url: `solana:${payment.merchantAddress}?amount=${payment.solAmount}&reference=${payment.id}`,
-                                            data: `solana:${payment.merchantAddress}?amount=${payment.solAmount}&reference=${payment.id}`
+                                            url: qrUrl,
+                                            data: qrUrl
                                         },
                                         status: 'active',
                                         createdAt: payment.createdAt
