@@ -318,7 +318,9 @@
                         payBtn.textContent = 'Preparing transaction...';
                         
                         // Create connection
-                        const connection = new window.SolanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+                        // Use Alchemy RPC endpoint
+                        const rpcUrl = 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5';
+                        const connection = new window.SolanaWeb3.Connection(rpcUrl, 'confirmed');
                         
                         // Get recent blockhash
                         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
