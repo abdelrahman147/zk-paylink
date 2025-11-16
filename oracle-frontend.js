@@ -446,9 +446,16 @@
                             ${date.toLocaleString()}
                         </p>
                     </div>
-                    <span class="status-badge status-${statusClass}" style="padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; background: ${payment.status === 'verified' ? 'var(--accent-success)' : payment.status === 'pending' ? 'var(--accent-warning)' : 'var(--accent-error)'}; color: white;">
-                        ${payment.status === 'verified' ? '✓ VERIFIED' : statusText}
-                    </span>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        ${payment.status === 'pending' ? `
+                        <button class="btn-primary verify-payment-btn" data-payment-id="${payment.id}" style="padding: 0.5rem 1rem; font-size: 0.85rem; white-space: nowrap;">
+                            Verify Now
+                        </button>
+                        ` : ''}
+                        <span class="status-badge status-${statusClass}" style="padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; background: ${payment.status === 'verified' ? 'var(--accent-success)' : payment.status === 'pending' ? 'var(--accent-warning)' : 'var(--accent-error)'}; color: white;">
+                            ${payment.status === 'verified' ? '✓ VERIFIED' : statusText}
+                        </span>
+                    </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
