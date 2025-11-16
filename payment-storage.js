@@ -157,8 +157,16 @@ class PaymentStorage {
 // Global helper function to delete duplicate payments
 if (typeof window !== 'undefined') {
     window.deleteDuplicatePayments = async function(paymentId) {
-        if (!window.paymentStorage) {
+        let paymentStorage = null;
+        
+        // Try to get paymentStorage from oracle first
+        if (window.oracle && window.oracle.paymentStorage) {
+            paymentStorage = window.oracle.paymentStorage;
+        } else if (window.paymentStorage) {
+            paymentStorage = window.paymentStorage;
+        } else {
             console.error('❌ PaymentStorage not initialized. Make sure the page is fully loaded.');
+            console.error('   Try: window.oracle.paymentStorage or window.paymentStorage');
             return;
         }
         
@@ -172,7 +180,7 @@ if (typeof window !== 'undefined') {
         
         while (attempts < maxAttempts) {
             attempts++;
-            const result = await window.paymentStorage.deletePayment(paymentId);
+            const result = await paymentStorage.deletePayment(paymentId);
             if (result.success) {
                 deleted++;
                 console.log(`✅ Deleted instance ${deleted} of payment ${paymentId}`);
