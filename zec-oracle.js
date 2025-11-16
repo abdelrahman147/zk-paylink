@@ -436,6 +436,13 @@ class SolanaPaymentOracle {
         }
     }
     
+    // Manual cleanup function - can be called to clean up all expired payments immediately
+    async cleanupAllExpiredPayments() {
+        console.log('🧹 Starting manual cleanup of all expired pending payments...');
+        await this.cleanupExpiredPayments();
+        console.log('✅ Manual cleanup complete');
+    }
+    
     // Monitor payment
     async monitorPayment(paymentId, txSignature) {
         const payment = this.payments.get(paymentId);
