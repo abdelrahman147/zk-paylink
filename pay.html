@@ -16,6 +16,16 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
+        // Suppress browser extension errors (MetaMask, etc.)
+        window.addEventListener('error', function(e) {
+            if (e.message && (e.message.includes('Cannot redefine property: ethereum') || 
+                e.message.includes('Cannot redefine property: web3'))) {
+                e.preventDefault();
+                e.stopPropagation();
+                return true;
+            }
+        }, true);
+        
         async function loadPaymentLink() {
             const pathParts = window.location.pathname.split('/').filter(p => p);
             let linkId = pathParts[pathParts.length - 1];
@@ -276,16 +286,24 @@
         }
         
         // Wait for SolanaWeb3 to load before initializing
-        function waitForSolanaWeb3() {
+        function waitForSolanaWeb3(maxAttempts = 50) {
             if (typeof window.SolanaWeb3 !== 'undefined') {
                 loadPaymentLink();
+            } else if (maxAttempts > 0) {
+                setTimeout(() => waitForSolanaWeb3(maxAttempts - 1), 100);
             } else {
-                setTimeout(waitForSolanaWeb3, 100);
+                // Fallback: try loading anyway (might work without SolanaWeb3 for display)
+                console.warn('SolanaWeb3 not loaded after 5 seconds, loading payment page anyway...');
+                loadPaymentLink();
             }
         }
         
-        // Start loading payment link
-        waitForSolanaWeb3();
+        // Start loading payment link when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => waitForSolanaWeb3());
+        } else {
+            waitForSolanaWeb3();
+        }
     </script>
 </body>
 </html>
