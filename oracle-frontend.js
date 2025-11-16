@@ -202,6 +202,11 @@
             oracle.startPaymentMonitoring();
         }
         
+        // Reload payments from Google Sheets to get latest status (including verified payments)
+        if (oracle && oracle.loadPaymentsFromStorage) {
+            await oracle.loadPaymentsFromStorage();
+        }
+        
         // Load payments
         const payments = oracle.getAllPayments();
         

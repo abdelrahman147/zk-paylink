@@ -581,6 +581,11 @@ class SolanaPaymentOracle {
             
             // Trigger webhook if configured
             await this.triggerWebhook(payment);
+            
+            // Reload payments from Google Sheets to ensure UI is updated
+            setTimeout(async () => {
+                await this.loadPaymentsFromStorage();
+            }, 1000);
         }
         
         return verification;
@@ -702,6 +707,11 @@ class SolanaPaymentOracle {
                             await this.savePaymentToBackend(payment);
                             await this.triggerWebhook(payment);
                             console.log(`✅ Payment ${payment.id} verified!`);
+                            
+                            // Reload payments from Google Sheets to ensure UI is updated
+                            setTimeout(async () => {
+                                await this.loadPaymentsFromStorage();
+                            }, 1000);
                         }
                     } catch (error) {
                         console.warn(`Failed to verify transaction for payment ${payment.id}:`, error);
@@ -748,6 +758,11 @@ class SolanaPaymentOracle {
                             await this.triggerWebhook(payment);
                             
                             console.log(`✅ Payment ${payment.id} verified via transaction ${sigInfo.signature}`);
+                            
+                            // Reload payments from Google Sheets to ensure UI is updated
+                            setTimeout(async () => {
+                                await this.loadPaymentsFromStorage();
+                            }, 1000);
                             break;
                         }
                     } catch (error) {

@@ -331,27 +331,73 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 await createSheetTab(actualSheetId, sheetName, accessToken);
             }
             
-            // Use proper range syntax for append - specify columns A through L (12 columns)
-            // Format: SheetName!A:L:append (same as leaderboard uses Sheet1!A:H:append)
-            const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A:L:append?valueInputOption=RAW`;
-            const appendResponse = await fetch(appendUrl, {
-                method: 'POST',
+            // Check if payment already exists in the sheet (by Payment ID in column A)
+            // Read all payment IDs to find existing row
+            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A2:A`;
+            const readResponse = await fetch(readUrl, {
                 headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ values: [values] })
+                    'Authorization': `Bearer ${accessToken}`
+                }
             });
-
-            if (!appendResponse.ok) {
-                const errorText = await appendResponse.text();
-                console.error(`[Payment Storage] ❌ Failed to append payment to Google Sheets:`, errorText);
-                throw new Error(`Failed to append payment: ${errorText}`);
+            
+            let existingRowIndex = null;
+            if (readResponse.ok) {
+                const readData = await readResponse.json();
+                const rows = readData.values || [];
+                
+                // Find row index (1-based, +1 for header row, so +2 total)
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i] && rows[i][0] === payment.id) {
+                        existingRowIndex = i + 2; // +2 because: +1 for 0-based to 1-based, +1 for header row
+                        console.log(`[Payment Storage] Found existing payment ${payment.id} at row ${existingRowIndex}`);
+                        break;
+                    }
+                }
             }
+            
+            if (existingRowIndex) {
+                // UPDATE existing row
+                const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}?valueInputOption=RAW`;
+                const updateResponse = await fetch(updateUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ values: [values] })
+                });
 
-            const appendResult = await appendResponse.json();
-            console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully appended to Google Sheets`);
-            console.log(`[Payment Storage] Sheet ID: ${actualSheetId}, Updated range: ${appendResult.updates?.updatedRange || 'N/A'}`);
+                if (!updateResponse.ok) {
+                    const errorText = await updateResponse.text();
+                    console.error(`[Payment Storage] ❌ Failed to update payment in Google Sheets:`, errorText);
+                    throw new Error(`Failed to update payment: ${errorText}`);
+                }
+
+                const updateResult = await updateResponse.json();
+                console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully updated in Google Sheets (row ${existingRowIndex})`);
+                console.log(`[Payment Storage] Status: ${payment.status}, Transaction: ${payment.transactionSignature || 'N/A'}`);
+            } else {
+                // APPEND new row (payment doesn't exist yet)
+                const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A:L:append?valueInputOption=RAW`;
+                const appendResponse = await fetch(appendUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ values: [values] })
+                });
+
+                if (!appendResponse.ok) {
+                    const errorText = await appendResponse.text();
+                    console.error(`[Payment Storage] ❌ Failed to append payment to Google Sheets:`, errorText);
+                    throw new Error(`Failed to append payment: ${errorText}`);
+                }
+
+                const appendResult = await appendResponse.json();
+                console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully appended to Google Sheets`);
+                console.log(`[Payment Storage] Sheet ID: ${actualSheetId}, Updated range: ${appendResult.updates?.updatedRange || 'N/A'}`);
+            }
 
             return { 
                 statusCode: 200, 
