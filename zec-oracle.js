@@ -325,12 +325,14 @@ class SolanaPaymentOracle {
                 const pendingCount = allPayments.filter(p => p.status === 'pending').length;
                 console.log(`✅ Loaded ${allPayments.length} payments from Google Sheets (${verifiedCount} verified, ${pendingCount} pending)`);
                 
-                // Clean up expired payments immediately after loading
-                // This ensures expired payments are removed as soon as they're loaded
-                setTimeout(async () => {
-                    console.log('🧹 Running automatic cleanup after loading payments...');
-                    await this.cleanupExpiredPayments();
-                }, 1000); // Wait 1 second after loading to clean up
+        // Clean up expired payments and duplicates immediately after loading
+        // This ensures expired payments and duplicates are removed as soon as they're loaded
+        setTimeout(async () => {
+            console.log('🧹 Running automatic cleanup after loading payments...');
+            await this.cleanupExpiredPayments();
+            // Also clean up duplicates
+            await this.cleanupDuplicatePayments();
+        }, 1000); // Wait 1 second after loading to clean up
                 
             } catch (error) {
                 console.error('Failed to load payments from storage:', error);
@@ -464,7 +466,54 @@ class SolanaPaymentOracle {
         try {
             const allPayments = await this.paymentStorage.loadPayments();
             
-            // Group payments by Order ID to find duplicates
+            // FIRST: Check for duplicate Payment IDs (most important - exact duplicates)
+            const paymentsByPaymentId = new Map();
+            allPayments.forEach(payment => {
+                if (payment.id) {
+                    if (!paymentsByPaymentId.has(payment.id)) {
+                        paymentsByPaymentId.set(payment.id, []);
+                    }
+                    paymentsByPaymentId.get(payment.id).push(payment);
+                }
+            });
+            
+            let duplicatesDeleted = 0;
+            
+            // Delete duplicates with same Payment ID
+            for (const [paymentId, payments] of paymentsByPaymentId.entries()) {
+                if (payments.length > 1) {
+                    console.log(`🔍 Found ${payments.length} duplicate payments with Payment ID: ${paymentId}`);
+                    
+                    // Sort: verified first, then by creation date (newest first)
+                    payments.sort((a, b) => {
+                        if (a.status === 'verified' && b.status !== 'verified') return -1;
+                        if (a.status !== 'verified' && b.status === 'verified') return 1;
+                        const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt;
+                        const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt;
+                        return bTime - aTime; // Newest first
+                    });
+                    
+                    // Keep ONLY the first one (best one), delete ALL the rest
+                    const toKeep = payments[0];
+                    const toDelete = payments.slice(1); // All except the first one
+                    
+                    console.log(`✅ Keeping 1 payment: ${toKeep.id} (status: ${toKeep.status})`);
+                    console.log(`🗑️ Deleting ${toDelete.length} duplicate(s): ${toDelete.map(p => p.id).join(', ')}`);
+                    
+                    for (const duplicate of toDelete) {
+                        try {
+                            await this.paymentStorage.deleteExpiredPayment(duplicate.id);
+                            this.payments.delete(duplicate.id);
+                            duplicatesDeleted++;
+                            console.log(`   ✓ Deleted duplicate: ${duplicate.id}`);
+                        } catch (error) {
+                            console.warn(`   ✗ Failed to delete duplicate ${duplicate.id}:`, error);
+                        }
+                    }
+                }
+            }
+            
+            // SECOND: Group payments by Order ID to find duplicates
             const paymentsByOrderId = new Map();
             allPayments.forEach(payment => {
                 if (payment.orderId) {
@@ -476,7 +525,6 @@ class SolanaPaymentOracle {
             });
             
             // Find duplicates (same Order ID with multiple payments)
-            let duplicatesDeleted = 0;
             for (const [orderId, payments] of paymentsByOrderId.entries()) {
                 if (payments.length > 1) {
                     console.log(`🔍 Found ${payments.length} duplicate payments with Order ID: ${orderId}`);
