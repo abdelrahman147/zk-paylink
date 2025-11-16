@@ -3,6 +3,40 @@ const fetch = require('node-fetch');
 // In-memory storage (in production, use a database)
 const payments = new Map();
 
+// Load payment from Google Sheets if not found in memory
+async function loadPaymentFromSheets(paymentId) {
+    try {
+        // Default sheet ID (can be overridden with query param)
+        const sheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
+        const sheetName = 'payment';
+        
+        // Call sheets-proxy to load payments
+        const sheetsUrl = `https://zecit.online/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
+        const response = await fetch(sheetsUrl);
+        
+        if (!response.ok) {
+            return null;
+        }
+        
+        const data = await response.json();
+        const allPayments = data.payments || [];
+        
+        // Find the payment by ID
+        const payment = allPayments.find(p => p.id === paymentId);
+        
+        if (payment) {
+            // Store in memory for future requests
+            payments.set(paymentId, payment);
+            return payment;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Failed to load payment from Google Sheets:', error);
+        return null;
+    }
+}
+
 exports.handler = async (event, context) => {
     // Handle OPTIONS preflight
     if (event.httpMethod === 'OPTIONS') {
@@ -66,7 +100,13 @@ exports.handler = async (event, context) => {
             
             if (paymentId && paymentId !== 'payments' && paymentId !== 'oracle') {
                 // Get single payment
-                const payment = payments.get(paymentId);
+                let payment = payments.get(paymentId);
+                
+                // If not found in memory, try loading from Google Sheets
+                if (!payment) {
+                    payment = await loadPaymentFromSheets(paymentId);
+                }
+                
                 if (!payment) {
                     return {
                         statusCode: 404,
