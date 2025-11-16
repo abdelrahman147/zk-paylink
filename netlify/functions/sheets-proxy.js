@@ -331,8 +331,14 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
             });
 
             if (!appendResponse.ok) {
-                throw new Error(`Failed to append payment: ${await appendResponse.text()}`);
+                const errorText = await appendResponse.text();
+                console.error(`[Payment Storage] ❌ Failed to append payment to Google Sheets:`, errorText);
+                throw new Error(`Failed to append payment: ${errorText}`);
             }
+
+            const appendResult = await appendResponse.json();
+            console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully appended to Google Sheets`);
+            console.log(`[Payment Storage] Sheet ID: ${actualSheetId}, Updated range: ${appendResult.updates?.updatedRange || 'N/A'}`);
 
             return { 
                 statusCode: 200, 
