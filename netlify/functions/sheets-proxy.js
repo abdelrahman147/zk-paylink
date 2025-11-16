@@ -307,6 +307,10 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 // Use existing sheet or create tab if needed
                 actualSheetId = await ensurePaymentSheet(sheetId, sheetName, accessToken);
             }
+            
+            // ALWAYS ensure headers are correct before saving/updating
+            // This fixes the "Merchant Addre: Status" combined header issue
+            await ensurePaymentSheet(actualSheetId, sheetName, accessToken);
 
             // Append payment row
             const values = [
