@@ -238,14 +238,24 @@ class SolanaPaymentOracle {
             // This ensures payments don't disappear on refresh
             // Only verified payments are used for all-time volume calculation
             // Expired pending payments will be deleted after 1 hour
+            if (!this.paymentStorage) {
+                // Try to initialize payment storage if not already initialized
+                await this.initPaymentStorage();
+            }
+            
             if (this.paymentStorage) {
                 try {
-                    await this.paymentStorage.savePayment(payment).catch(err => {
-                        console.warn('Failed to save payment to sheets:', err);
-                    });
+                    const saveResult = await this.paymentStorage.savePayment(payment);
+                    if (saveResult && saveResult.success) {
+                        console.log(`✅ Payment ${payment.id} saved to Google Sheets`);
+                    } else {
+                        console.warn(`⚠️ Payment ${payment.id} save returned:`, saveResult);
+                    }
                 } catch (err) {
-                    console.warn('Payment storage not ready yet:', err);
+                    console.error(`❌ Failed to save payment ${payment.id} to sheets:`, err);
                 }
+            } else {
+                console.warn('⚠️ Payment storage not available, payment will not persist across refreshes');
             }
             
             // Trigger webhook

@@ -14,17 +14,38 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        // Suppress browser extension errors (MetaMask, etc.)
-        window.addEventListener('error', function(e) {
-            if (e.message && (e.message.includes('Cannot redefine property: ethereum') || 
-                e.message.includes('Cannot redefine property: web3'))) {
-                e.preventDefault();
-                e.stopPropagation();
-                return true;
-            }
-        }, true);
+        // Suppress browser extension errors (MetaMask, etc.) - must be before any scripts
+        (function() {
+            const originalDefineProperty = Object.defineProperty;
+            Object.defineProperty = function(obj, prop, descriptor) {
+                if (prop === 'ethereum' || prop === 'web3') {
+                    try {
+                        return originalDefineProperty.call(this, obj, prop, descriptor);
+                    } catch (e) {
+                        if (e.message && e.message.includes('Cannot redefine property')) {
+                            console.warn('Suppressed browser extension injection:', prop);
+                            return obj;
+                        }
+                        throw e;
+                    }
+                }
+                return originalDefineProperty.call(this, obj, prop, descriptor);
+            };
+        })();
+    </script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js" onerror="loadSolanaFallback()"></script>
+    <script>
+        // Fallback SolanaWeb3 loader
+        function loadSolanaFallback() {
+            console.warn('Primary SolanaWeb3 CDN failed, trying fallback...');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js';
+            script.onerror = function() {
+                console.error('All SolanaWeb3 CDNs failed. Payment functionality may be limited.');
+            };
+            document.head.appendChild(script);
+        }
         
         async function loadPaymentLink() {
             const pathParts = window.location.pathname.split('/').filter(p => p);
@@ -286,23 +307,27 @@
         }
         
         // Wait for SolanaWeb3 to load before initializing
-        function waitForSolanaWeb3(maxAttempts = 50) {
+        function waitForSolanaWeb3(maxAttempts = 100) {
             if (typeof window.SolanaWeb3 !== 'undefined') {
+                console.log('✅ SolanaWeb3 loaded successfully');
                 loadPaymentLink();
             } else if (maxAttempts > 0) {
                 setTimeout(() => waitForSolanaWeb3(maxAttempts - 1), 100);
             } else {
                 // Fallback: try loading anyway (might work without SolanaWeb3 for display)
-                console.warn('SolanaWeb3 not loaded after 5 seconds, loading payment page anyway...');
+                console.warn('⚠️ SolanaWeb3 not loaded after 10 seconds, loading payment page anyway...');
+                console.warn('⚠️ "Pay with Wallet" button will not work until SolanaWeb3 loads');
                 loadPaymentLink();
             }
         }
         
         // Start loading payment link when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => waitForSolanaWeb3());
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => waitForSolanaWeb3(), 100);
+            });
         } else {
-            waitForSolanaWeb3();
+            setTimeout(() => waitForSolanaWeb3(), 100);
         }
     </script>
 </body>
