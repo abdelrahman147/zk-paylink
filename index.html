@@ -330,12 +330,17 @@ sdk.on('payment.confirmed', (event) => {
                 <div id="merchant-payments" class="merchant-tab-content">
                     <div class="merchant-header">
                         <h3>Payment Management</h3>
-                        <select id="payment-filter" class="sort-select">
-                            <option value="all">All Payments</option>
-                            <option value="pending">Pending</option>
-                            <option value="verified">Verified</option>
-                            <option value="confirmed">Confirmed</option>
-                        </select>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <select id="payment-filter" class="sort-select">
+                                <option value="all">All Payments</option>
+                                <option value="pending">Pending</option>
+                                <option value="verified">Verified</option>
+                                <option value="confirmed">Confirmed</option>
+                            </select>
+                            <button id="check-payments-btn" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                Check Now
+                            </button>
+                        </div>
                     </div>
                     <div id="merchant-payments-list"></div>
                 </div>
@@ -618,7 +623,7 @@ app.post('/api/checkout', async (req, res) => {
                     }
                     console.log('✅ SolanaWeb3 already loaded');
                     return;
-                }
+                        }
                 
                 if (currentIndex >= cdnUrls.length) {
                     console.error('❌ All SolanaWeb3 CDNs failed. Some features may not work.');
