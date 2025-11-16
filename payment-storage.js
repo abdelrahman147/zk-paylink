@@ -162,6 +162,17 @@ class PaymentStorage {
     }
 }
 
+// Global helper function to manually clean up all expired payments
+if (typeof window !== 'undefined') {
+    window.cleanupAllExpiredPayments = async function() {
+        if (window.oracle && window.oracle.cleanupAllExpiredPayments) {
+            await window.oracle.cleanupAllExpiredPayments();
+        } else {
+            console.error('❌ Oracle not initialized. Make sure the page is fully loaded.');
+        }
+    };
+}
+
 // Global helper function to delete duplicate payments by Order ID
 if (typeof window !== 'undefined') {
     window.deletePaymentsByOrderId = async function(orderId) {

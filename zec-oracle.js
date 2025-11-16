@@ -373,6 +373,7 @@ class SolanaPaymentOracle {
         const now = Date.now();
         const oneHour = 60 * 60 * 1000;
         
+        // First, clean up in-memory payments
         const expiredPayments = Array.from(this.payments.values())
             .filter(p => p.status === 'pending' && (now - p.createdAt) > oneHour);
         
@@ -389,7 +390,7 @@ class SolanaPaymentOracle {
                 console.warn(`Failed to delete payment ${payment.id} from backend:`, error);
             }
             
-            // Delete from Google Sheets (expired pending payments should be removed)
+            // Delete from Google Sheets
             if (this.paymentStorage) {
                 try {
                     await this.paymentStorage.deleteExpiredPayment(payment.id);
@@ -400,8 +401,38 @@ class SolanaPaymentOracle {
             }
         }
         
-        if (expiredPayments.length > 0) {
-            console.log(`✅ Cleaned up ${expiredPayments.length} expired pending payments`);
+        // Also check Google Sheets for expired payments that might not be in memory
+        if (this.paymentStorage) {
+            try {
+                const allPayments = await this.paymentStorage.loadPayments();
+                const expiredFromSheets = allPayments.filter(p => {
+                    if (p.status !== 'pending') return false;
+                    const createdAt = typeof p.createdAt === 'string' ? new Date(p.createdAt).getTime() : p.createdAt;
+                    return (now - createdAt) > oneHour;
+                });
+                
+                for (const payment of expiredFromSheets) {
+                    console.log(`🗑️ Deleting expired pending payment from Google Sheets: ${payment.id}`);
+                    try {
+                        await this.paymentStorage.deleteExpiredPayment(payment.id);
+                        // Also remove from in-memory if it exists
+                        this.payments.delete(payment.id);
+                    } catch (error) {
+                        console.warn(`Failed to delete expired payment ${payment.id} from Google Sheets:`, error);
+                    }
+                }
+                
+                if (expiredFromSheets.length > 0) {
+                    console.log(`✅ Cleaned up ${expiredFromSheets.length} expired pending payments from Google Sheets`);
+                }
+            } catch (error) {
+                console.warn('Failed to check Google Sheets for expired payments:', error);
+            }
+        }
+        
+        const totalCleaned = expiredPayments.length + (expiredFromSheets?.length || 0);
+        if (totalCleaned > 0) {
+            console.log(`✅ Total cleaned up: ${totalCleaned} expired pending payments`);
         }
     }
     
