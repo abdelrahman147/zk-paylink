@@ -415,10 +415,11 @@ class SolanaPaymentOracle {
         }
         
         // Also check Google Sheets for expired payments that might not be in memory
+        let expiredFromSheets = [];
         if (this.paymentStorage) {
             try {
                 const allPayments = await this.paymentStorage.loadPayments();
-                const expiredFromSheets = allPayments.filter(p => {
+                expiredFromSheets = allPayments.filter(p => {
                     if (p.status !== 'pending') return false;
                     const createdAt = typeof p.createdAt === 'string' ? new Date(p.createdAt).getTime() : p.createdAt;
                     return (now - createdAt) > oneHour;
@@ -443,7 +444,7 @@ class SolanaPaymentOracle {
             }
         }
         
-        const totalCleaned = expiredPayments.length + (expiredFromSheets?.length || 0);
+        const totalCleaned = expiredPayments.length + expiredFromSheets.length;
         if (totalCleaned > 0) {
             console.log(`✅ Total cleaned up: ${totalCleaned} expired pending payments`);
         }
