@@ -239,23 +239,41 @@ class SolanaPaymentOracle {
             // Only verified payments are used for all-time volume calculation
             // Expired pending payments will be deleted after 1 hour
             if (!this.paymentStorage) {
-                // Try to initialize payment storage if not already initialized
-                await this.initPaymentStorage();
+                console.log('🔄 PaymentStorage not initialized, attempting to initialize...');
+                const initialized = await this.initPaymentStorage();
+                if (!initialized) {
+                    console.error('❌ Failed to initialize PaymentStorage. Payment will not be saved to Google Sheets.');
+                    console.error('❌ Make sure payment-storage.js is loaded before zec-oracle.js');
+                }
             }
             
             if (this.paymentStorage) {
                 try {
+                    console.log(`💾 Attempting to save payment ${payment.id} to Google Sheets...`);
                     const saveResult = await this.paymentStorage.savePayment(payment);
                     if (saveResult && saveResult.success) {
-                        console.log(`✅ Payment ${payment.id} saved to Google Sheets`);
+                        console.log(`✅ Payment ${payment.id} saved to Google Sheets successfully!`);
+                        if (saveResult.result && saveResult.result.sheetId) {
+                            console.log(`📊 Sheet ID: ${saveResult.result.sheetId}`);
+                        }
                     } else {
-                        console.warn(`⚠️ Payment ${payment.id} save returned:`, saveResult);
+                        console.error(`❌ Payment ${payment.id} save failed. Result:`, saveResult);
+                        if (saveResult && saveResult.error) {
+                            console.error(`❌ Error: ${saveResult.error}`);
+                        }
                     }
                 } catch (err) {
-                    console.error(`❌ Failed to save payment ${payment.id} to sheets:`, err);
+                    console.error(`❌ Exception while saving payment ${payment.id} to sheets:`, err);
+                    console.error(`❌ Error stack:`, err.stack);
                 }
             } else {
-                console.warn('⚠️ Payment storage not available, payment will not persist across refreshes');
+                console.error('❌ Payment storage not available, payment will not persist across refreshes');
+                console.error('❌ Payment data:', {
+                    id: payment.id,
+                    amount: payment.amount,
+                    status: payment.status,
+                    createdAt: new Date(payment.createdAt).toISOString()
+                });
             }
             
             // Trigger webhook
@@ -304,7 +322,17 @@ class SolanaPaymentOracle {
     
     async initPaymentStorage() {
         if (typeof window !== 'undefined' && window.PaymentStorage) {
-            this.paymentStorage = new window.PaymentStorage();
+            try {
+                this.paymentStorage = new window.PaymentStorage();
+                console.log('✅ PaymentStorage initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to initialize PaymentStorage:', error);
+                return false;
+            }
+        } else {
+            console.warn('⚠️ PaymentStorage class not available. Make sure payment-storage.js is loaded.');
+            return false;
         }
     }
     
