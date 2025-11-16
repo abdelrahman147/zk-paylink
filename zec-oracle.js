@@ -377,11 +377,13 @@ class SolanaPaymentOracle {
         // Run cleanup immediately
         setTimeout(async () => {
             await this.cleanupExpiredPayments();
+            await this.cleanupDuplicatePayments();
         }, 3000); // Wait 3 seconds after initialization
         
         // Then run cleanup every 30 seconds automatically
         this.cleanupInterval = setInterval(async () => {
             await this.cleanupExpiredPayments();
+            await this.cleanupDuplicatePayments();
         }, 30000); // Check every 30 seconds
     }
     
