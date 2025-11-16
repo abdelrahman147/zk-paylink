@@ -145,6 +145,48 @@ class PaymentStorage {
             return { success: false, error: error.message };
         }
     }
+    
+    /**
+     * Delete payment by ID (can be called multiple times to remove duplicates)
+     */
+    async deletePayment(paymentId) {
+        return await this.deleteExpiredPayment(paymentId);
+    }
+}
+
+// Global helper function to delete duplicate payments
+if (typeof window !== 'undefined') {
+    window.deleteDuplicatePayments = async function(paymentId) {
+        if (!window.paymentStorage) {
+            console.error('❌ PaymentStorage not initialized. Make sure the page is fully loaded.');
+            return;
+        }
+        
+        console.log(`🗑️ Deleting all instances of payment ${paymentId}...`);
+        
+        // Delete multiple times to remove all duplicates
+        // The delete function will find and remove each instance
+        let deleted = 0;
+        let attempts = 0;
+        const maxAttempts = 10; // Safety limit
+        
+        while (attempts < maxAttempts) {
+            attempts++;
+            const result = await window.paymentStorage.deletePayment(paymentId);
+            if (result.success) {
+                deleted++;
+                console.log(`✅ Deleted instance ${deleted} of payment ${paymentId}`);
+                // Wait a bit before trying again
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } else {
+                // No more instances found
+                break;
+            }
+        }
+        
+        console.log(`✅ Finished. Deleted ${deleted} instance(s) of payment ${paymentId}`);
+        return { deleted, attempts };
+    };
 }
 
 // Export
