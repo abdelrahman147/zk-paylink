@@ -324,7 +324,8 @@
         
         // Auto-refresh every 5 seconds to show updated payment status
         // This ensures verified payments appear automatically
-        setTimeout(loadOracleData, 5000);
+        // Reduced auto-refresh to avoid rate limits
+        setTimeout(loadOracleData, 30000); // Every 30 seconds instead of 5
     }
     
     // Expose loadOracleData globally so oracle can trigger it

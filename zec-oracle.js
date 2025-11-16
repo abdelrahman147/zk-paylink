@@ -393,11 +393,11 @@ class SolanaPaymentOracle {
             await this.cleanupDuplicatePayments();
         }, 3000); // Wait 3 seconds after initialization
         
-        // Then run cleanup every 30 seconds automatically
+        // Then run cleanup every 5 minutes automatically to avoid rate limits
         this.cleanupInterval = setInterval(async () => {
             await this.cleanupExpiredPayments();
             await this.cleanupDuplicatePayments();
-        }, 30000); // Check every 30 seconds
+        }, 300000); // Check every 5 minutes to avoid rate limits
     }
     
     // Cleanup expired pending payments (older than 1 hour)
@@ -718,10 +718,10 @@ class SolanaPaymentOracle {
         // Check immediately when starting
         this.checkPendingPayments();
         
-        // Then check every 1 minute
+        // Then check every 5 minutes to avoid rate limits
         this.monitoringInterval = setInterval(async () => {
             await this.checkPendingPayments();
-        }, 60000); // Check every 1 minute (60000ms)
+        }, 300000); // Check every 5 minutes (300000ms) to avoid Alchemy rate limits
     }
     
     // Stop payment monitoring
@@ -751,7 +751,7 @@ class SolanaPaymentOracle {
             // Check more transactions (100) to catch payments sent before monitoring started
             const publicKey = new window.SolanaWeb3.PublicKey(this.merchantAddress);
             const signatures = await this.solanaConnection.getSignaturesForAddress(publicKey, {
-                limit: 100 // Increased from 20 to catch older transactions
+                limit: 20 // Reduced to avoid rate limits
             });
             
             console.log(`🔍 Checking ${pendingPayments.length} pending payment(s) against ${signatures.length} recent transaction(s)...`);

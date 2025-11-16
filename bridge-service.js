@@ -173,7 +173,7 @@ class ZcashSolanaBridge {
                 if (window.SolanaWeb3) {
                     this.SolanaWeb3 = window.SolanaWeb3;
                     clearInterval(checkInterval);
-                    resolve();
+                resolve();
                 } else if (attempts >= maxAttempts) {
                     clearInterval(checkInterval);
                     reject(new Error('SolanaWeb3 failed to load after 5 seconds'));
@@ -324,8 +324,8 @@ class ZcashSolanaBridge {
                 
                 // Don't mark premium endpoints as rate limited on first failure
                 if (!rpcUrl.includes('alchemy') && !rpcUrl.includes('infura')) {
-                    if (errorMsg.includes('403') || errorMsg.includes('forbidden') || errorMsg.includes('rate limit')) {
-                        this.markRateLimited(rpcUrl);
+                if (errorMsg.includes('403') || errorMsg.includes('forbidden') || errorMsg.includes('rate limit')) {
+                    this.markRateLimited(rpcUrl);
                     }
                 }
                 
@@ -353,7 +353,7 @@ class ZcashSolanaBridge {
                 console.warn(`⚠️ Using fallback connection to ${displayUrl} (connection may be slow)`);
             } catch (fallbackError) {
                 console.error('Fallback connection also failed:', fallbackError.message);
-                this.solanaConnection = null;
+        this.solanaConnection = null;
             }
         } else {
             this.solanaConnection = null;

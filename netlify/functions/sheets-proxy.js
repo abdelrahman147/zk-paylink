@@ -628,14 +628,24 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
             });
 
             if (!readResponse.ok) {
-                if (readResponse.status === 400) {
+                if (readResponse.status === 400 || readResponse.status === 404) {
                     // Sheet doesn't exist, return empty
                     return { statusCode: 200, headers, body: JSON.stringify({ success: true, payments: [] }) };
                 }
-                throw new Error(`Failed to read payments: ${await readResponse.text()}`);
+                const errorText = await readResponse.text().catch(() => 'Unknown error');
+                console.error(`Failed to read payments from Google Sheets: ${readResponse.status} - ${errorText}`);
+                // Return empty array instead of throwing to prevent 500 errors
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, payments: [] }) };
             }
 
-            const data = await readResponse.json();
+            let data;
+            try {
+                data = await readResponse.json();
+            } catch (e) {
+                console.error('Failed to parse response JSON:', e);
+                return { statusCode: 200, headers, body: JSON.stringify({ success: true, payments: [] }) };
+            }
+            
             const rows = data.values || [];
             
             const payments = rows.map(row => {

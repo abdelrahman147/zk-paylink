@@ -505,7 +505,7 @@ class MiniGame {
                         } else {
                             console.error(`❌ Global endGame() still not available after retry - using fallback`);
                             // Fallback: call this.endGame() if global function not available
-                            this.endGame();
+            this.endGame();
                         }
                     }, 200);
                 }
