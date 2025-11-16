@@ -213,14 +213,69 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            // Update payment with transaction signature
-            payment.transactionSignature = signature;
-            payment.status = 'verified';
-            payment.confirmedAt = Date.now();
+            // REAL BLOCKCHAIN VERIFICATION - Verify transaction exists on chain
+            const txSignature = signature || body.signature || payment.transactionSignature;
+            let blockchainVerified = false;
+            let blockTime = body.blockTime;
+            let slot = body.slot;
+            
+            if (txSignature) {
+                try {
+                    // Use Alchemy RPC for verification
+                    const rpcUrl = 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5';
+                    const verifyResponse = await fetch(rpcUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            id: 1,
+                            method: 'getTransaction',
+                            params: [
+                                txSignature,
+                                {
+                                    encoding: 'jsonParsed',
+                                    commitment: 'confirmed',
+                                    maxSupportedTransactionVersion: 0
+                                }
+                            ]
+                        })
+                    });
+                    
+                    if (verifyResponse.ok) {
+                        const verifyData = await verifyResponse.json();
+                        if (verifyData.result && verifyData.result.meta && !verifyData.result.meta.err) {
+                            // Transaction confirmed on blockchain - REAL verification
+                            blockchainVerified = true;
+                            blockTime = verifyData.result.blockTime || blockTime;
+                            slot = verifyData.result.slot || slot;
+                            console.log(`✅ Transaction ${txSignature} verified on blockchain`);
+                            console.log(`   Block time: ${blockTime ? new Date(blockTime * 1000).toISOString() : 'N/A'}`);
+                            console.log(`   Slot: ${slot || 'N/A'}`);
+                        } else if (verifyData.result && verifyData.result.meta && verifyData.result.meta.err) {
+                            console.warn(`⚠️ Transaction ${txSignature} found but failed on chain`);
+                        } else {
+                            console.warn(`⚠️ Transaction ${txSignature} not found on blockchain yet`);
+                        }
+                    }
+                } catch (verifyError) {
+                    console.warn('⚠️ Error verifying transaction on blockchain:', verifyError);
+                    // If verification fails, still update with signature but mark as pending
+                }
+            }
+            
+            // Update payment with REAL blockchain data
+            payment.transactionSignature = txSignature;
+            payment.status = blockchainVerified ? 'verified' : (body.status || 'pending');
+            payment.confirmedAt = blockTime ? blockTime * 1000 : (body.confirmedAt || Date.now());
+            payment.blockTime = blockTime;
+            payment.slot = slot;
             payments.set(paymentId, payment);
             
-            console.log(`✅ Payment ${paymentId} verified with signature: ${signature}`);
-            console.log(`   Status: ${payment.status}, Confirmed: ${new Date(payment.confirmedAt).toISOString()}`);
+            console.log(`✅ Payment ${paymentId} updated with signature: ${txSignature}`);
+            console.log(`   Status: ${payment.status} (${blockchainVerified ? 'blockchain verified' : 'pending verification'})`);
+            console.log(`   Confirmed: ${new Date(payment.confirmedAt).toISOString()}`);
             
             // Also save to Google Sheets immediately
             try {

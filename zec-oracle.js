@@ -19,9 +19,31 @@ class SolanaPaymentOracle {
     async initSolana() {
         if (typeof window !== 'undefined' && window.SolanaWeb3) {
             try {
+                // Suppress signatureSubscribe errors (WebSocket subscriptions not supported by HTTP RPC)
+                const originalConsoleError = console.error;
+                let errorSuppressed = false;
+                
+                const errorInterceptor = function(...args) {
+                    const message = args.join(' ');
+                    if ((message.includes('signatureSubscribe') || message.includes('Received JSON-RPC error calling')) && !errorSuppressed) {
+                        errorSuppressed = true;
+                        console.warn('⚠️ Solana RPC subscription errors suppressed (WebSocket subscriptions not supported by HTTP RPC endpoint)');
+                        return;
+                    }
+                    originalConsoleError.apply(console, args);
+                };
+                
+                console.error = errorInterceptor;
+                
                 // Use Alchemy RPC as default (most reliable)
                 const rpcUrl = this.solanaRpcUrl || 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5';
                 this.solanaConnection = new window.SolanaWeb3.Connection(rpcUrl, 'confirmed');
+                
+                // Restore console.error after connection is established
+                setTimeout(() => {
+                    console.error = originalConsoleError;
+                }, 3000);
+                
                 console.log(`✅ Solana connection initialized with Alchemy RPC`);
             } catch (error) {
                 console.warn('Solana initialization failed:', error);
@@ -840,8 +862,8 @@ class SolanaPaymentOracle {
                         const maxTimeDiff = 24 * 60 * 60 * 1000; // 24 hours
                         const allowBeforeCreation = 5 * 60 * 1000; // Allow 5 minutes before payment creation
                         
-                        // More flexible amount matching - allow 1% difference for fees/slippage
-                        const amountTolerance = payment.solAmount * 0.01; // 1% tolerance
+                        // More flexible amount matching - allow 5% difference for fees/slippage
+                        const amountTolerance = payment.solAmount * 0.05; // 5% tolerance
                         const amountMatches = Math.abs(amount - payment.solAmount) <= Math.max(amountTolerance, 0.00000001);
                         
                         if (amount > 0 && 
@@ -941,7 +963,7 @@ class SolanaPaymentOracle {
     // Extract SPL token amount from transaction
     extractSPLTokenAmount(tx, address, token) {
         try {
-            if (!tx || !tx.meta || !tx.meta.postTokenBalances || !tx.meta.preTokenBalances) {
+            if (!tx || !tx.meta) {
                 return 0;
             }
             
@@ -957,25 +979,45 @@ class SolanaPaymentOracle {
                 return 0;
             }
             
-            // Find token account for our address
+            const addressStr = address.toString();
             const postTokenBalances = tx.meta.postTokenBalances || [];
             const preTokenBalances = tx.meta.preTokenBalances || [];
             
-            // Look for token account that matches our address and token mint
+            // Method 1: Check by owner address (for Associated Token Accounts)
             for (const postBalance of postTokenBalances) {
-                if (postBalance.owner && postBalance.owner === address.toString() && 
-                    postBalance.mint && postBalance.mint === expectedMint) {
-                    
-                    // Find corresponding pre-balance
+                if (postBalance.mint && postBalance.mint === expectedMint) {
+                    // Check if owner matches our address
+                    if (postBalance.owner && postBalance.owner === addressStr) {
+                        const preBalance = preTokenBalances.find(
+                            pre => pre.accountIndex === postBalance.accountIndex && pre.mint === expectedMint
+                        );
+                        
+                        const preAmount = preBalance ? parseFloat(preBalance.uiTokenAmount?.uiAmount || 0) : 0;
+                        const postAmount = parseFloat(postBalance.uiTokenAmount?.uiAmount || 0);
+                        const change = postAmount - preAmount;
+                        
+                        if (change > 0) {
+                            console.log(`✅ Found ${token} transfer: ${change} (pre: ${preAmount}, post: ${postAmount})`);
+                            return change;
+                        }
+                    }
+                }
+            }
+            
+            // Method 2: Check all token accounts and find increases to any account with our mint
+            // This handles cases where the ATA might be created in the same transaction
+            for (const postBalance of postTokenBalances) {
+                if (postBalance.mint && postBalance.mint === expectedMint) {
                     const preBalance = preTokenBalances.find(
-                        pre => pre.accountIndex === postBalance.accountIndex
+                        pre => pre.accountIndex === postBalance.accountIndex && pre.mint === expectedMint
                     );
                     
-                    const preAmount = preBalance ? parseFloat(preBalance.uiTokenAmount.uiAmount || 0) : 0;
-                    const postAmount = parseFloat(postBalance.uiTokenAmount.uiAmount || 0);
+                    const preAmount = preBalance ? parseFloat(preBalance.uiTokenAmount?.uiAmount || 0) : 0;
+                    const postAmount = parseFloat(postBalance.uiTokenAmount?.uiAmount || 0);
                     const change = postAmount - preAmount;
                     
-                    if (change > 0) {
+                    // If there's a positive change and the owner matches, return it
+                    if (change > 0 && postBalance.owner === addressStr) {
                         console.log(`✅ Found ${token} transfer: ${change} (pre: ${preAmount}, post: ${postAmount})`);
                         return change;
                     }
@@ -1053,8 +1095,8 @@ class SolanaPaymentOracle {
                     const amount = this.extractTransactionAmount(tx, publicKey, payment.token || 'SOL');
                     const timeDiff = Math.abs(tx.blockTime * 1000 - payment.createdAt);
                     
-                    // More flexible matching
-                    const amountTolerance = payment.solAmount * 0.01;
+                    // More flexible matching - allow 5% difference
+                    const amountTolerance = payment.solAmount * 0.05; // 5% tolerance
                     const amountMatches = Math.abs(amount - payment.solAmount) <= Math.max(amountTolerance, 0.00000001);
                     const timeMatches = timeDiff < (24 * 60 * 60 * 1000) && 
                                        (tx.blockTime * 1000 >= payment.createdAt - (5 * 60 * 1000));

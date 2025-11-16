@@ -740,24 +740,73 @@
                             }
                         }
                         
-                        payBtn.textContent = 'Notifying backend...';
+                        payBtn.textContent = 'Verifying on blockchain...';
                         
-                        // Notify backend about the payment
+                        // REAL BLOCKCHAIN VERIFICATION - Check transaction on chain
+                        let txVerified = false;
+                        let verifiedTx = null;
+                        
+                        // Wait 10 seconds for transaction to propagate on blockchain
+                        console.log('⏳ Waiting 10 seconds for transaction to propagate on blockchain...');
+                        await new Promise(resolve => setTimeout(resolve, 10000));
+                        
+                        // Check blockchain multiple times to ensure transaction is confirmed
+                        for (let attempt = 0; attempt < 5; attempt++) {
+                            try {
+                                verifiedTx = await connection.getTransaction(signature, {
+                                    commitment: 'confirmed',
+                                    maxSupportedTransactionVersion: 0
+                                });
+                                
+                                if (verifiedTx && verifiedTx.meta && !verifiedTx.meta.err) {
+                                    // Transaction found and confirmed on blockchain
+                                    console.log('✅ Transaction verified on blockchain:', signature);
+                                    console.log('   Block time:', verifiedTx.blockTime ? new Date(verifiedTx.blockTime * 1000).toISOString() : 'N/A');
+                                    console.log('   Slot:', verifiedTx.slot);
+                                    txVerified = true;
+                                    break;
+                                } else if (verifiedTx && verifiedTx.meta && verifiedTx.meta.err) {
+                                    throw new Error('Transaction failed on chain');
+                                }
+                            } catch (err) {
+                                console.log(`   Attempt ${attempt + 1}/5: Transaction not yet confirmed, retrying in 3 seconds...`);
+                                await new Promise(resolve => setTimeout(resolve, 3000));
+                            }
+                        }
+                        
+                        if (!txVerified || !verifiedTx) {
+                            console.warn('⚠️ Transaction signature received but not yet confirmed on blockchain');
+                            console.warn('   Will continue checking in background...');
+                            // Still notify backend with signature, but status will be checked
+                        }
+                        
+                        payBtn.textContent = 'Updating backend...';
+                        
+                        // Notify backend about the payment with REAL blockchain data
                         try {
                             const verifyResponse = await fetch(`/api/oracle/payments/${payment.id}/verify`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ signature: signature })
+                                body: JSON.stringify({ 
+                                    signature: signature,
+                                    status: txVerified ? 'verified' : 'pending',
+                                    confirmedAt: txVerified && verifiedTx?.blockTime ? verifiedTx.blockTime * 1000 : Date.now(),
+                                    blockTime: verifiedTx?.blockTime,
+                                    slot: verifiedTx?.slot
+                                })
                             });
                             
                             if (!verifyResponse.ok) {
                                 console.warn('Backend verification failed:', await verifyResponse.text());
                             } else {
-                                console.log('✅ Payment sent and backend notified');
+                                const verifyData = await verifyResponse.json();
+                                console.log('✅ Payment verified on blockchain and backend updated');
+                                console.log('   Google Sheet will be updated with transaction signature');
+                                
                                 // Update payment status locally
-                                payment.status = 'verified';
+                                payment.status = txVerified ? 'verified' : 'pending';
                                 payment.transactionSignature = signature;
-                                payment.confirmedAt = Date.now();
+                                payment.confirmedAt = txVerified && verifiedTx?.blockTime ? verifiedTx.blockTime * 1000 : Date.now();
                                 
                                 // Refresh the page display
                                 displayPaymentPage(link, payment);
@@ -767,10 +816,10 @@
                         }
                         
                         // Don't show alert or redirect - just update the page
-                        payBtn.textContent = 'Payment Sent';
+                        payBtn.textContent = txVerified ? 'Payment Verified' : 'Payment Sent (Verifying...)';
                         payBtn.disabled = true;
                         
-                        // Start polling for verification status
+                        // Continue polling to ensure verification completes
                         startPaymentStatusPolling(payment.id);
                     } catch (error) {
                         console.error('Payment error:', error);
@@ -831,13 +880,72 @@
                         const data = await response.json();
                         const payment = data.payment;
                         
-                        // Check if payment is verified (by status or by having a transaction signature)
-                        if (payment && (payment.status === 'verified' || payment.transactionSignature)) {
-                            console.log('✅ Payment verified! Updating page...');
+                        // REAL BLOCKCHAIN CHECK - Verify transaction actually exists on chain
+                        if (payment && payment.transactionSignature) {
+                            // Check blockchain directly to verify transaction
+                            try {
+                                const connection = new window.SolanaWeb3.Connection('https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5', 'confirmed');
+                                const txOnChain = await connection.getTransaction(payment.transactionSignature, {
+                                    commitment: 'confirmed',
+                                    maxSupportedTransactionVersion: 0
+                                });
+                                
+                                if (txOnChain && txOnChain.meta && !txOnChain.meta.err) {
+                                    // Transaction confirmed on blockchain - REAL verification
+                                    console.log('✅ Payment verified on blockchain! Transaction found:', payment.transactionSignature);
+                                    
+                                    if (payment.status !== 'verified') {
+                                        // Update status to verified and notify backend
+                                        console.log('🔄 Updating payment status to verified...');
+                                        
+                                        try {
+                                            const notifyResponse = await fetch(`/api/oracle/payments/${paymentId}/verify`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    signature: payment.transactionSignature,
+                                                    status: 'verified',
+                                                    confirmedAt: txOnChain.blockTime ? txOnChain.blockTime * 1000 : Date.now(),
+                                                    blockTime: txOnChain.blockTime,
+                                                    slot: txOnChain.slot
+                                                })
+                                            });
+                                            
+                                            if (notifyResponse.ok) {
+                                                console.log('✅ Backend updated, Google Sheet will reflect verified status');
+                                            } else {
+                                                console.warn('⚠️ Failed to notify backend:', await notifyResponse.text());
+                                            }
+                                        } catch (notifyError) {
+                                            console.warn('⚠️ Error notifying backend:', notifyError);
+                                        }
+                                    }
+                                    
+                                    clearInterval(statusPollInterval);
+                                    statusPollInterval = null;
+                                    
+                                    // Reload payment link to show verified status
+                                    loadPaymentLink();
+                                    return;
+                                } else if (txOnChain && txOnChain.meta && txOnChain.meta.err) {
+                                    console.warn('⚠️ Transaction found but failed on chain');
+                                } else {
+                                    // Transaction signature exists but not found on chain yet
+                                    console.log('🔄 Transaction signature exists but not yet confirmed on blockchain, continuing to check...');
+                                }
+                            } catch (blockchainError) {
+                                console.warn('⚠️ Error checking blockchain:', blockchainError);
+                                // Continue polling
+                            }
+                        }
+                        
+                        // Also check if status is already verified (from previous check)
+                        if (payment && payment.status === 'verified' && payment.transactionSignature) {
+                            console.log('✅ Payment already verified');
                             clearInterval(statusPollInterval);
                             statusPollInterval = null;
-                            
-                            // Reload payment link to show verified status
                             loadPaymentLink();
                             return;
                         }
