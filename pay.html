@@ -34,18 +34,54 @@
             };
         })();
     </script>
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js" onerror="loadSolanaFallback()"></script>
     <script>
-        // Fallback SolanaWeb3 loader
-        function loadSolanaFallback() {
-            console.warn('Primary SolanaWeb3 CDN failed, trying fallback...');
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js';
-            script.onerror = function() {
-                console.error('All SolanaWeb3 CDNs failed. Payment functionality may be limited.');
-            };
-            document.head.appendChild(script);
-        }
+        // Load SolanaWeb3 with multiple fallbacks
+        (function() {
+            const cdnUrls = [
+                'https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js',
+                'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.87.6/lib/index.iife.min.js',
+                'https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js'
+            ];
+            
+            let currentIndex = 0;
+            
+            function tryLoadSolana() {
+                if (typeof window.SolanaWeb3 !== 'undefined') {
+                    console.log('✅ SolanaWeb3 already loaded');
+                    return;
+                }
+                
+                if (currentIndex >= cdnUrls.length) {
+                    console.error('❌ All SolanaWeb3 CDNs failed. Payment functionality will be limited.');
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = cdnUrls[currentIndex];
+                script.async = true;
+                
+                script.onload = function() {
+                    if (typeof window.SolanaWeb3 !== 'undefined') {
+                        console.log(`✅ SolanaWeb3 loaded from CDN ${currentIndex + 1}`);
+                    } else {
+                        console.warn(`⚠️ Script loaded but SolanaWeb3 not defined, trying next CDN...`);
+                        currentIndex++;
+                        tryLoadSolana();
+                    }
+                };
+                
+                script.onerror = function() {
+                    console.warn(`⚠️ CDN ${currentIndex + 1} failed, trying next...`);
+                    currentIndex++;
+                    setTimeout(tryLoadSolana, 500);
+                };
+                
+                document.head.appendChild(script);
+            }
+            
+            // Start loading immediately
+            tryLoadSolana();
+        })();
         
         async function loadPaymentLink() {
             const pathParts = window.location.pathname.split('/').filter(p => p);
@@ -196,10 +232,28 @@
             const payBtn = document.getElementById('pay-with-wallet-btn');
             if (payBtn) {
                 payBtn.addEventListener('click', async () => {
-                    // Wait for SolanaWeb3 to load
+                    // Wait for SolanaWeb3 to load with retry
                     if (typeof window.SolanaWeb3 === 'undefined') {
-                        alert('Solana library is loading. Please wait a moment and try again.');
-                        return;
+                        payBtn.disabled = true;
+                        payBtn.textContent = 'Loading Solana library...';
+                        
+                        // Wait up to 5 seconds for SolanaWeb3
+                        for (let i = 0; i < 50; i++) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            if (typeof window.SolanaWeb3 !== 'undefined') {
+                                break;
+                            }
+                        }
+                        
+                        if (typeof window.SolanaWeb3 === 'undefined') {
+                            alert('Solana library failed to load. Please refresh the page or scan the QR code to pay.');
+                            payBtn.disabled = false;
+                            payBtn.textContent = 'Pay with Wallet';
+                            return;
+                        }
+                        
+                        payBtn.disabled = false;
+                        payBtn.textContent = 'Pay with Wallet';
                     }
                     
                     if (!window.solana || !window.solana.isPhantom) {
@@ -307,7 +361,7 @@
         }
         
         // Wait for SolanaWeb3 to load before initializing
-        function waitForSolanaWeb3(maxAttempts = 100) {
+        function waitForSolanaWeb3(maxAttempts = 150) {
             if (typeof window.SolanaWeb3 !== 'undefined') {
                 console.log('✅ SolanaWeb3 loaded successfully');
                 loadPaymentLink();
@@ -315,20 +369,19 @@
                 setTimeout(() => waitForSolanaWeb3(maxAttempts - 1), 100);
             } else {
                 // Fallback: try loading anyway (might work without SolanaWeb3 for display)
-                console.warn('⚠️ SolanaWeb3 not loaded after 10 seconds, loading payment page anyway...');
+                console.warn('⚠️ SolanaWeb3 not loaded after 15 seconds, loading payment page anyway...');
                 console.warn('⚠️ "Pay with Wallet" button will not work until SolanaWeb3 loads');
+                console.warn('⚠️ You can still scan the QR code to pay');
                 loadPaymentLink();
             }
         }
         
-        // Start loading payment link when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => waitForSolanaWeb3(), 100);
-            });
-        } else {
-            setTimeout(() => waitForSolanaWeb3(), 100);
-        }
+        // Start loading payment link immediately (don't wait for SolanaWeb3 for display)
+        // SolanaWeb3 is only needed for "Pay with Wallet" button
+        loadPaymentLink();
+        
+        // Also wait for SolanaWeb3 in background for button functionality
+        setTimeout(() => waitForSolanaWeb3(), 500);
     </script>
 </body>
 </html>
