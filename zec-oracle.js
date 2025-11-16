@@ -1002,11 +1002,48 @@ class SolanaPaymentOracle {
     }
 }
 
+    // Manual check function for immediate verification
+    async manualCheckPayment(paymentId) {
+        console.log(`🔍 Manual check requested for payment: ${paymentId}`);
+        const payment = this.payments.get(paymentId);
+        if (!payment) {
+            console.warn(`Payment ${paymentId} not found in memory`);
+            return { success: false, error: 'Payment not found' };
+        }
+        
+        if (payment.status === 'verified' && payment.transactionSignature) {
+            console.log(`Payment ${paymentId} already verified with signature: ${payment.transactionSignature}`);
+            // Force save to ensure Google Sheet is updated
+            await this.savePaymentToBackend(payment);
+            return { success: true, payment, message: 'Payment already verified, forcing sheet update' };
+        }
+        
+        // Force check pending payments
+        await this.checkPendingPayments();
+        
+        // Check again after verification
+        const updatedPayment = this.payments.get(paymentId);
+        if (updatedPayment && updatedPayment.status === 'verified') {
+            return { success: true, payment: updatedPayment, message: 'Payment verified via Alchemy RPC' };
+        }
+        
+        return { success: false, error: 'Payment still pending, no matching transaction found' };
+    }
+}
+
 // Export
 if (typeof window !== 'undefined') {
     window.SolanaPaymentOracle = SolanaPaymentOracle;
     // Keep old name for backwards compatibility
     window.ZcashPaymentOracle = SolanaPaymentOracle;
+    
+    // Expose manual check function globally
+    window.manualCheckPayment = async (paymentId) => {
+        if (window.oracle) {
+            return await window.oracle.manualCheckPayment(paymentId);
+        }
+        return { success: false, error: 'Oracle not initialized' };
+    };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
