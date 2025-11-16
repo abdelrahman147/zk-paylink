@@ -312,21 +312,26 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
             // This fixes the "Merchant Addre: Status" combined header issue
             await ensurePaymentSheet(actualSheetId, sheetName, accessToken);
 
-            // Append payment row
+            // Append payment row - ensure all values are properly formatted
+            // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
             const values = [
-                payment.id,
-                payment.amount,
-                payment.currency || 'USD',
-                payment.token || 'SOL',
-                payment.solAmount || payment.amount,
-                payment.orderId || '',
-                payment.merchantAddress || '',
-                payment.status,
-                payment.transactionSignature || '',
-                new Date(payment.createdAt).toISOString(),
+                String(payment.id || '').trim(),
+                String(payment.amount || 0),
+                String(payment.currency || 'USD'),
+                String(payment.token || 'SOL'),
+                String(payment.solAmount || payment.amount || 0),
+                String(payment.orderId || '').trim(),
+                String(payment.merchantAddress || '').trim(),
+                String(payment.status || 'pending'), // Ensure status is always set
+                String(payment.transactionSignature || '').trim(), // Transaction signature
+                payment.createdAt ? new Date(payment.createdAt).toISOString() : new Date().toISOString(),
                 payment.confirmedAt ? new Date(payment.confirmedAt).toISOString() : '',
                 JSON.stringify(payment.proof || {})
             ];
+            
+            console.log(`[Payment Storage] Preparing to save payment ${payment.id}`);
+            console.log(`[Payment Storage] Status: "${payment.status}", Signature: "${payment.transactionSignature || 'N/A'}"`);
+            console.log(`[Payment Storage] Values array length: ${values.length}, Values:`, values);
 
             // Ensure the sheet tab exists before appending
             const tabExists = await checkSheetTabExists(actualSheetId, sheetName, accessToken);
@@ -353,11 +358,20 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 console.log(`[Payment Storage] Checking ${rows.length} rows for payment ID: ${payment.id}`);
                 
                 // Find ALL rows with this payment ID (to handle duplicates)
+                // Match by exact payment ID (case-sensitive, trimmed)
+                const paymentIdToFind = String(payment.id || '').trim();
+                console.log(`[Payment Storage] Searching for payment ID: "${paymentIdToFind}"`);
+                
                 for (let i = 0; i < rows.length; i++) {
-                    if (rows[i] && rows[i][0] && rows[i][0].trim() === payment.id.trim()) {
+                    const rowPaymentId = rows[i] && rows[i][0] ? String(rows[i][0]).trim() : '';
+                    if (rowPaymentId === paymentIdToFind) {
                         const rowIndex = i + 2; // +2 because: +1 for 0-based to 1-based, +1 for header row
                         duplicateRowIndices.push(rowIndex);
-                        console.log(`[Payment Storage] Found payment ${payment.id} at row ${rowIndex} (index ${i})`);
+                        console.log(`[Payment Storage] ✅ Found exact match for payment "${paymentIdToFind}" at row ${rowIndex} (index ${i})`);
+                        console.log(`[Payment Storage]    Row data: ${JSON.stringify(rows[i])}`);
+                    } else if (rowPaymentId && rowPaymentId.startsWith(paymentIdToFind.substring(0, 20))) {
+                        // Partial match (in case of truncation in sheet)
+                        console.log(`[Payment Storage] ⚠️ Found partial match: "${rowPaymentId}" starts with "${paymentIdToFind.substring(0, 20)}"`);
                     }
                 }
                 
@@ -433,11 +447,17 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
             
             if (existingRowIndex) {
                 // UPDATE existing row
-                console.log(`[Payment Storage] Updating row ${existingRowIndex} for payment ${payment.id}`);
+                console.log(`[Payment Storage] 🔄 Updating row ${existingRowIndex} for payment ${payment.id}`);
                 console.log(`[Payment Storage] Payment data: status=${payment.status}, signature=${payment.transactionSignature || 'N/A'}, confirmedAt=${payment.confirmedAt || 'N/A'}`);
                 console.log(`[Payment Storage] Values to update:`, values);
                 
+                // Force update with explicit column mapping to ensure correct data placement
+                // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
                 const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}?valueInputOption=RAW`;
+                
+                console.log(`[Payment Storage] Update URL: ${updateUrl}`);
+                console.log(`[Payment Storage] Updating with status: "${payment.status}", signature: "${payment.transactionSignature || ''}"`);
+                
                 const updateResponse = await fetch(updateUrl, {
                     method: 'PUT',
                     headers: {
@@ -452,6 +472,22 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                     console.error(`[Payment Storage] ❌ Failed to update payment in Google Sheets:`, errorText);
                     console.error(`[Payment Storage] Update URL: ${updateUrl}`);
                     console.error(`[Payment Storage] Response status: ${updateResponse.status}`);
+                    console.error(`[Payment Storage] Payment ID: ${payment.id}, Status: ${payment.status}, Signature: ${payment.transactionSignature}`);
+                    
+                    // Try to read the current row to see what's there
+                    try {
+                        const readCurrentUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}`;
+                        const readCurrentResponse = await fetch(readCurrentUrl, {
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                        if (readCurrentResponse.ok) {
+                            const currentData = await readCurrentResponse.json();
+                            console.error(`[Payment Storage] Current row data:`, currentData.values);
+                        }
+                    } catch (readErr) {
+                        console.error(`[Payment Storage] Could not read current row:`, readErr);
+                    }
+                    
                     throw new Error(`Failed to update payment: ${errorText}`);
                 }
         
@@ -459,6 +495,22 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully updated in Google Sheets (row ${existingRowIndex})`);
                 console.log(`[Payment Storage] Status: ${payment.status}, Transaction: ${payment.transactionSignature || 'N/A'}`);
                 console.log(`[Payment Storage] Updated range: ${updateResult.updatedRange || 'N/A'}`);
+                
+                // Verify the update by reading back the row
+                setTimeout(async () => {
+                    try {
+                        const verifyUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}`;
+                        const verifyResponse = await fetch(verifyUrl, {
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                        if (verifyResponse.ok) {
+                            const verifyData = await verifyResponse.json();
+                            console.log(`[Payment Storage] ✅ Verified update - Row ${existingRowIndex} now contains:`, verifyData.values?.[0]);
+                        }
+                    } catch (verifyErr) {
+                        console.warn(`[Payment Storage] Could not verify update:`, verifyErr);
+                    }
+                }, 1000);
             } else {
                 // APPEND new row (payment doesn't exist yet)
                 const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A:L:append?valueInputOption=RAW`;
