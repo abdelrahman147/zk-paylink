@@ -116,12 +116,12 @@
                     <div class="feature-icon">💳</div>
                     <h3 class="feature-title">Multi-Currency Support</h3>
                     <p class="feature-description">Accept Bitcoin, Ethereum, Solana, USDC, and 50+ cryptocurrencies. Automatic conversion and settlement.</p>
-                </div>
+            </div>
                 <div class="feature-card">
                     <div class="feature-icon">🛒</div>
                     <h3 class="feature-title">Shopping Cart Integration</h3>
                     <p class="feature-description">Seamless integration with Shopify, WooCommerce, Magento, and custom ecommerce platforms.</p>
-                </div>
+                        </div>
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3 class="feature-title">Instant Payments</h3>
@@ -145,14 +145,14 @@
             </div>
         </div>
     </section>
-
+    
     
     <section id="quickstart" class="section section-dark">
         <div class="container">
             <h2 class="section-title">Get Started in 5 Minutes</h2>
             <div class="quickstart-content">
                 <div class="code-block">
-                    <div class="code-header">
+                            <div class="code-header">
                         <span>Installation</span>
                     </div>
                     <pre><code>npm install cryptocommerce-sdk
@@ -160,7 +160,7 @@
 yarn add cryptocommerce-sdk</code></pre>
                 </div>
                 <div class="code-block">
-                    <div class="code-header">
+                            <div class="code-header">
                         <span>Basic Integration</span>
                     </div>
                     <pre><code>import { CryptoCommerce } from 'cryptocommerce-sdk';
@@ -182,7 +182,7 @@ const payment = await sdk.createPayment({
 payment.showQRCode();</code></pre>
                 </div>
                 <div class="code-block">
-                    <div class="code-header">
+                            <div class="code-header">
                         <span>Webhook Handler</span>
                     </div>
                     <pre><code>// Handle payment confirmation
@@ -271,7 +271,7 @@ sdk.on('payment.confirmed', (event) => {
                     <div class="checkout-form-group">
                         <label>Payment ID</label>
                         <input type="text" id="payment-id-input" placeholder="Enter payment ID to verify">
-                    </div>
+                        </div>
                     <div class="checkout-form-group">
                         <label>Expected Amount (SOL)</label>
                         <input type="number" id="expected-amount" step="0.00000001" placeholder="0.00000000">
@@ -451,7 +451,7 @@ app.post('/api/checkout', async (req, res) => {
 
   res.json({ paymentId: payment.id, qrCode: payment.qrCode });
 });</code></pre>
-                </div>
+            </div>
                 <div class="example-card">
                     <h3 class="example-title">Shopify Integration</h3>
                     <pre><code>// Shopify Liquid Template
@@ -486,12 +486,12 @@ app.post('/api/checkout', async (req, res) => {
                     <h3>Getting Started</h3>
                     <p>Complete guide to integrating CryptoCommerce SDK into your application.</p>
                     <a href="#" class="doc-link">Read More →</a>
-                </div>
+            </div>
                 <div class="doc-card">
                     <h3>Payment Methods</h3>
                     <p>Learn about supported cryptocurrencies and payment options.</p>
                     <a href="#" class="doc-link">Read More →</a>
-                </div>
+                        </div>
                 <div class="doc-card">
                     <h3>Webhooks</h3>
                     <p>Set up webhooks to receive payment notifications in real-time.</p>
@@ -509,10 +509,10 @@ app.post('/api/checkout', async (req, res) => {
     
     <section id="game" class="section game-section">
         <div class="container">
-            <h2 class="section-title">Mini Game - Free to Play</h2>
+                <h2 class="section-title">Mini Game - Free to Play</h2>
             <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
-                Click targets to score points! Free to play - just connect your wallet to start. Compete on the leaderboard!
-            </p>
+                    Click targets to score points! Free to play - just connect your wallet to start. Compete on the leaderboard!
+                </p>
             
             <div class="game-container">
                 <div class="game-controls">
@@ -572,14 +572,14 @@ app.post('/api/checkout', async (req, res) => {
                     <p>Cryptocurrency payment integration for modern ecommerce platforms.</p>
                 </div>
                 <div class="footer-section">
-                    <h4>Resources</h4>
+                        <h4>Resources</h4>
                     <ul>
                         <li><a href="#docs">Documentation</a></li>
                         <li><a href="#api">API Reference</a></li>
                         <li><a href="#examples">Examples</a></li>
                         <li><a href="#">GitHub</a></li>
                     </ul>
-                </div>
+                    </div>
                 <div class="footer-section">
                     <h4>Support</h4>
                     <ul>
@@ -598,10 +598,10 @@ app.post('/api/checkout', async (req, res) => {
     <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
     <script src="config.js" onerror="console.log('config.js not found, using defaults')"></script>
     <script src="bridge-service.js"></script>
-    <script src="api-service.js"></script>
-    <script src="oracle-service.js"></script>
-    <script src="mini-game.js"></script>
-    <script src="anti-cheat.js"></script>
+        <script src="api-service.js"></script>
+        <script src="oracle-service.js"></script>
+        <script src="mini-game.js"></script>
+        <script src="anti-cheat.js"></script>
     <script src="payment-storage.js"></script>
     <script src="zec-oracle.js"></script>
     <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
@@ -613,8 +613,8 @@ app.post('/api/checkout', async (req, res) => {
     <script src="merchant-dashboard.js"></script>
     <script src="cryptocommerce-sdk.js"></script>
     <script src="leaderboard-service.js"></script>
-    <script src="leaderboard-sheets.js"></script>
+        <script src="leaderboard-sheets.js"></script>
     <script src="leaderboard-backend.js"></script>
-    <script src="script.js"></script>
+        <script src="script.js"></script>
 </body>
 </html>

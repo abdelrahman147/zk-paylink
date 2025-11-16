@@ -157,22 +157,28 @@ class ZcashSolanaBridge {
     async loadSolanaWeb3() {
         if (this.SolanaWeb3) return;
         
-        
         return new Promise((resolve, reject) => {
-            if (window.solanaWeb3) {
-                this.SolanaWeb3 = window.solanaWeb3;
+            // Check if already loaded globally
+            if (window.SolanaWeb3) {
+                this.SolanaWeb3 = window.SolanaWeb3;
                 resolve();
                 return;
             }
             
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js';
-            script.onload = () => {
-                this.SolanaWeb3 = window.solanaWeb3;
-                resolve();
-            };
-            script.onerror = reject;
-            document.head.appendChild(script);
+            // Wait for the script to load (with timeout)
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max wait
+            const checkInterval = setInterval(() => {
+                attempts++;
+                if (window.SolanaWeb3) {
+                    this.SolanaWeb3 = window.SolanaWeb3;
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    reject(new Error('SolanaWeb3 failed to load after 5 seconds'));
+                }
+            }, 100);
         });
     }
     
