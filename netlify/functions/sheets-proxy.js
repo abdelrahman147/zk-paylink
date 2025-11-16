@@ -357,21 +357,23 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 
                 console.log(`[Payment Storage] Checking ${rows.length} rows for payment ID: ${payment.id}`);
                 
-                // Find ALL rows with this payment ID (to handle duplicates)
-                // Match by exact payment ID (case-sensitive, trimmed)
+                // Find ALL rows with this payment ID (to handle duplicates and truncation)
+                // Match by exact payment ID OR by first part (in case of truncation in sheet)
                 const paymentIdToFind = String(payment.id || '').trim();
-                console.log(`[Payment Storage] Searching for payment ID: "${paymentIdToFind}"`);
+                const paymentIdPrefix = paymentIdToFind.substring(0, 25); // First 25 chars for matching truncated IDs
+                console.log(`[Payment Storage] Searching for payment ID: "${paymentIdToFind}" (prefix: "${paymentIdPrefix}")`);
                 
                 for (let i = 0; i < rows.length; i++) {
                     const rowPaymentId = rows[i] && rows[i][0] ? String(rows[i][0]).trim() : '';
-                    if (rowPaymentId === paymentIdToFind) {
+                    
+                    // Exact match OR prefix match (for truncated IDs in sheet)
+                    if (rowPaymentId === paymentIdToFind || 
+                        (rowPaymentId && paymentIdToFind.startsWith(rowPaymentId)) ||
+                        (rowPaymentId && rowPaymentId.startsWith(paymentIdPrefix))) {
                         const rowIndex = i + 2; // +2 because: +1 for 0-based to 1-based, +1 for header row
                         duplicateRowIndices.push(rowIndex);
-                        console.log(`[Payment Storage] ✅ Found exact match for payment "${paymentIdToFind}" at row ${rowIndex} (index ${i})`);
+                        console.log(`[Payment Storage] ✅ Found match for payment "${paymentIdToFind}" at row ${rowIndex} (sheet has: "${rowPaymentId}")`);
                         console.log(`[Payment Storage]    Row data: ${JSON.stringify(rows[i])}`);
-                    } else if (rowPaymentId && rowPaymentId.startsWith(paymentIdToFind.substring(0, 20))) {
-                        // Partial match (in case of truncation in sheet)
-                        console.log(`[Payment Storage] ⚠️ Found partial match: "${rowPaymentId}" starts with "${paymentIdToFind.substring(0, 20)}"`);
                     }
                 }
                 
@@ -445,27 +447,28 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 console.warn(`[Payment Storage] Failed to read sheet to check for existing payment: ${readResponse.status}`);
             }
             
-            if (existingRowIndex) {
-                // UPDATE existing row
-                console.log(`[Payment Storage] 🔄 Updating row ${existingRowIndex} for payment ${payment.id}`);
-                console.log(`[Payment Storage] Payment data: status=${payment.status}, signature=${payment.transactionSignature || 'N/A'}, confirmedAt=${payment.confirmedAt || 'N/A'}`);
-                console.log(`[Payment Storage] Values to update:`, values);
-                
-                // Force update with explicit column mapping to ensure correct data placement
-                // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
-                const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}?valueInputOption=RAW`;
-                
-                console.log(`[Payment Storage] Update URL: ${updateUrl}`);
-                console.log(`[Payment Storage] Updating with status: "${payment.status}", signature: "${payment.transactionSignature || ''}"`);
-                
-                const updateResponse = await fetch(updateUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ values: [values] })
-                });
+                if (existingRowIndex) {
+                    // UPDATE existing row - FORCE UPDATE with all fields
+                    console.log(`[Payment Storage] 🔄 FORCE UPDATING row ${existingRowIndex} for payment ${payment.id}`);
+                    console.log(`[Payment Storage] Payment data: status=${payment.status}, signature=${payment.transactionSignature || 'N/A'}, confirmedAt=${payment.confirmedAt || 'N/A'}`);
+                    console.log(`[Payment Storage] Values to update:`, values);
+                    
+                    // Force update with explicit column mapping to ensure correct data placement
+                    // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
+                    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}?valueInputOption=RAW`;
+                    
+                    console.log(`[Payment Storage] Update URL: ${updateUrl}`);
+                    console.log(`[Payment Storage] FORCE UPDATING with status: "${payment.status}", signature: "${payment.transactionSignature || ''}"`);
+                    console.log(`[Payment Storage] Full values array:`, JSON.stringify([values]));
+                    
+                    const updateResponse = await fetch(updateUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ values: [values] })
+                    });
         
                 if (!updateResponse.ok) {
                     const errorText = await updateResponse.text();
@@ -491,26 +494,42 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                     throw new Error(`Failed to update payment: ${errorText}`);
                 }
         
-                const updateResult = await updateResponse.json();
-                console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully updated in Google Sheets (row ${existingRowIndex})`);
-                console.log(`[Payment Storage] Status: ${payment.status}, Transaction: ${payment.transactionSignature || 'N/A'}`);
-                console.log(`[Payment Storage] Updated range: ${updateResult.updatedRange || 'N/A'}`);
-                
-                // Verify the update by reading back the row
-                setTimeout(async () => {
+                    const updateResult = await updateResponse.json();
+                    console.log(`[Payment Storage] ✅ Payment ${payment.id} successfully updated in Google Sheets (row ${existingRowIndex})`);
+                    console.log(`[Payment Storage] Status: ${payment.status}, Transaction: ${payment.transactionSignature || 'N/A'}`);
+                    console.log(`[Payment Storage] Updated range: ${updateResult.updatedRange || 'N/A'}`);
+                    console.log(`[Payment Storage] Update response:`, JSON.stringify(updateResult));
+                    
+                    // Verify the update by reading back the row IMMEDIATELY
                     try {
+                        // Wait 500ms for Google Sheets to sync
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
                         const verifyUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}`;
                         const verifyResponse = await fetch(verifyUrl, {
                             headers: { 'Authorization': `Bearer ${accessToken}` }
                         });
                         if (verifyResponse.ok) {
                             const verifyData = await verifyResponse.json();
-                            console.log(`[Payment Storage] ✅ Verified update - Row ${existingRowIndex} now contains:`, verifyData.values?.[0]);
+                            const updatedRow = verifyData.values?.[0] || [];
+                            console.log(`[Payment Storage] ✅ VERIFIED UPDATE - Row ${existingRowIndex} now contains:`);
+                            console.log(`[Payment Storage]    Status (col H): "${updatedRow[7] || 'MISSING'}"`);
+                            console.log(`[Payment Storage]    Signature (col I): "${updatedRow[8] || 'MISSING'}"`);
+                            console.log(`[Payment Storage]    Full row:`, updatedRow);
+                            
+                            // If status or signature didn't update, log warning
+                            if (updatedRow[7] !== payment.status) {
+                                console.error(`[Payment Storage] ❌ STATUS MISMATCH! Expected "${payment.status}", got "${updatedRow[7]}"`);
+                            }
+                            if (updatedRow[8] !== payment.transactionSignature && payment.transactionSignature) {
+                                console.error(`[Payment Storage] ❌ SIGNATURE MISMATCH! Expected "${payment.transactionSignature}", got "${updatedRow[8]}"`);
+                            }
+                        } else {
+                            console.warn(`[Payment Storage] Could not verify update: HTTP ${verifyResponse.status}`);
                         }
                     } catch (verifyErr) {
                         console.warn(`[Payment Storage] Could not verify update:`, verifyErr);
                     }
-                }, 1000);
             } else {
                 // APPEND new row (payment doesn't exist yet)
                 const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A:L:append?valueInputOption=RAW`;

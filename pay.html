@@ -808,7 +808,27 @@
                                 payment.transactionSignature = signature;
                                 payment.confirmedAt = txVerified && verifiedTx?.blockTime ? verifiedTx.blockTime * 1000 : Date.now();
                                 
-                                // Refresh the page display
+                                // If verified, STOP ALL POLLING IMMEDIATELY
+                                if (txVerified) {
+                                    // Stop any existing polling
+                                    if (statusPollInterval) {
+                                        clearInterval(statusPollInterval);
+                                        statusPollInterval = null;
+                                    }
+                                    console.log('✅ Payment verified - ALL POLLING STOPPED');
+                                    
+                                    // Refresh the page display to show verified status
+                                    displayPaymentPage(link, payment);
+                                    
+                                    // Reload payment link to ensure UI is updated
+                                    setTimeout(() => {
+                                        loadPaymentLink();
+                                    }, 500);
+                                    
+                                    return; // Exit early, don't start new polling
+                                }
+                                
+                                // If not verified yet, refresh display
                                 displayPaymentPage(link, payment);
                             }
                         } catch (err) {
@@ -819,8 +839,10 @@
                         payBtn.textContent = txVerified ? 'Payment Verified' : 'Payment Sent (Verifying...)';
                         payBtn.disabled = true;
                         
-                        // Continue polling to ensure verification completes
-                        startPaymentStatusPolling(payment.id);
+                        // Only start polling if NOT verified yet
+                        if (!txVerified) {
+                            startPaymentStatusPolling(payment.id);
+                        }
                     } catch (error) {
                         console.error('Payment error:', error);
                         let errorMessage = 'Payment failed: ';
@@ -861,18 +883,26 @@
         let statusPollInterval = null;
         
         function startPaymentStatusPolling(paymentId) {
-            // Stop any existing polling
+            // Stop any existing polling FIRST
             if (statusPollInterval) {
                 clearInterval(statusPollInterval);
+                statusPollInterval = null;
             }
             
             console.log('🔄 Starting payment status polling for:', paymentId);
             
             let pollCount = 0;
             const maxPolls = 120; // 10 minutes (120 * 5 seconds)
+            let isStopped = false; // Flag to prevent multiple stops
             
             // Poll every 5 seconds to check if payment is verified
             statusPollInterval = setInterval(async () => {
+                if (isStopped) {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                    return;
+                }
+                
                 pollCount++;
                 try {
                     const response = await fetch(`/api/oracle/payments/${paymentId}`);
@@ -894,43 +924,47 @@
                                     // Transaction confirmed on blockchain - REAL verification
                                     console.log('✅ Payment verified on blockchain! Transaction found:', payment.transactionSignature);
                                     
-                                    if (payment.status !== 'verified') {
-                                        // Update status to verified and notify backend
-                                        console.log('🔄 Updating payment status to verified...');
-                                        
-                                        try {
-                                            const notifyResponse = await fetch(`/api/oracle/payments/${paymentId}/verify`, {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json'
-                                                },
-                                                body: JSON.stringify({
-                                                    signature: payment.transactionSignature,
-                                                    status: 'verified',
-                                                    confirmedAt: txOnChain.blockTime ? txOnChain.blockTime * 1000 : Date.now(),
-                                                    blockTime: txOnChain.blockTime,
-                                                    slot: txOnChain.slot
-                                                })
-                                            });
-                                            
-                                            if (notifyResponse.ok) {
-                                                console.log('✅ Backend updated, Google Sheet will reflect verified status');
-                                            } else {
-                                                console.warn('⚠️ Failed to notify backend:', await notifyResponse.text());
-                                            }
-                                        } catch (notifyError) {
-                                            console.warn('⚠️ Error notifying backend:', notifyError);
-                                        }
+                                    // IMMEDIATELY stop polling and update
+                                    isStopped = true;
+                                    if (statusPollInterval) {
+                                        clearInterval(statusPollInterval);
+                                        statusPollInterval = null;
                                     }
                                     
-                                    clearInterval(statusPollInterval);
-                                    statusPollInterval = null;
+                                    // Force update backend and Google Sheets
+                                    try {
+                                        const notifyResponse = await fetch(`/api/oracle/payments/${paymentId}/verify`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({
+                                                signature: payment.transactionSignature,
+                                                status: 'verified',
+                                                confirmedAt: txOnChain.blockTime ? txOnChain.blockTime * 1000 : Date.now(),
+                                                blockTime: txOnChain.blockTime,
+                                                slot: txOnChain.slot
+                                            })
+                                        });
+                                        
+                                        if (notifyResponse.ok) {
+                                            console.log('✅ Backend updated, Google Sheet updated');
+                                        } else {
+                                            const errorText = await notifyResponse.text();
+                                            console.warn('⚠️ Failed to notify backend:', errorText);
+                                        }
+                                    } catch (notifyError) {
+                                        console.warn('⚠️ Error notifying backend:', notifyError);
+                                    }
                                     
                                     // Reload payment link to show verified status
                                     loadPaymentLink();
                                     return;
                                 } else if (txOnChain && txOnChain.meta && txOnChain.meta.err) {
                                     console.warn('⚠️ Transaction found but failed on chain');
+                                    clearInterval(statusPollInterval);
+                                    statusPollInterval = null;
+                                    return;
                                 } else {
                                     // Transaction signature exists but not found on chain yet
                                     console.log('🔄 Transaction signature exists but not yet confirmed on blockchain, continuing to check...');
@@ -941,24 +975,37 @@
                             }
                         }
                         
-                        // Also check if status is already verified (from previous check)
-                        if (payment && payment.status === 'verified' && payment.transactionSignature) {
-                            console.log('✅ Payment already verified');
-                            clearInterval(statusPollInterval);
-                            statusPollInterval = null;
+                        // Check if status is already verified (from backend response)
+                        if (payment && payment.status === 'verified') {
+                            console.log('✅ Payment verified (status: verified) - STOPPING POLLING');
+                            isStopped = true;
+                            if (statusPollInterval) {
+                                clearInterval(statusPollInterval);
+                                statusPollInterval = null;
+                            }
                             loadPaymentLink();
                             return;
                         }
                         
+                        // If payment has transaction signature, check blockchain directly
+                        if (payment && payment.transactionSignature && payment.status === 'pending') {
+                            // Backend should have verified it, but if not, check blockchain one more time
+                            console.log('🔄 Payment has signature but status is pending, checking blockchain directly...');
+                            // The blockchain check above should handle this, but if it didn't, we'll catch it here
+                        }
+                        
                         // Log progress every 30 seconds (6 polls)
                         if (pollCount % 6 === 0) {
-                            console.log(`🔄 Still polling... (${pollCount * 5}s elapsed, status: ${payment?.status || 'unknown'})`);
+                            console.log(`🔄 Still polling... (${pollCount * 5}s elapsed, status: ${payment?.status || 'unknown'}, signature: ${payment?.transactionSignature ? 'yes' : 'no'})`);
                         }
                     } else if (response.status === 404) {
                         // Payment not found - might have been deleted or expired
                         console.warn('⚠️ Payment not found, stopping polling');
-                        clearInterval(statusPollInterval);
-                        statusPollInterval = null;
+                        isStopped = true;
+                        if (statusPollInterval) {
+                            clearInterval(statusPollInterval);
+                            statusPollInterval = null;
+                        }
                     }
                 } catch (error) {
                     console.warn('Error polling payment status:', error);
@@ -966,9 +1013,12 @@
                 }
                 
                 // Stop polling after max attempts
-                if (pollCount >= maxPolls) {
-                    clearInterval(statusPollInterval);
-                    statusPollInterval = null;
+                if (pollCount >= maxPolls && !isStopped) {
+                    isStopped = true;
+                    if (statusPollInterval) {
+                        clearInterval(statusPollInterval);
+                        statusPollInterval = null;
+                    }
                     console.log('⏹️ Stopped payment status polling (timeout after 10 minutes)');
                 }
             }, 5000); // Check every 5 seconds

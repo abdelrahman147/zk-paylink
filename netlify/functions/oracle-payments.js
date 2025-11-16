@@ -151,9 +151,10 @@ exports.handler = async (event, context) => {
                     };
                 }
                 
-                // CRITICAL: If payment has transaction signature, verify it's actually on blockchain
+                // CRITICAL: If payment has transaction signature, ALWAYS verify it's actually on blockchain
                 // and update status accordingly (no mock data - real blockchain check)
-                if (payment.transactionSignature && payment.status !== 'verified') {
+                // This ensures the status is ALWAYS correct, even if Google Sheets has old data
+                if (payment.transactionSignature) {
                     try {
                         const rpcUrl = 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5';
                         const verifyResponse = await fetch(rpcUrl, {
@@ -174,32 +175,35 @@ exports.handler = async (event, context) => {
                             const verifyData = await verifyResponse.json();
                             if (verifyData.result && verifyData.result.meta && !verifyData.result.meta.err) {
                                 // Transaction confirmed on blockchain - REAL verification
-                                console.log(`✅ Payment ${paymentId} has verified transaction on blockchain, updating status`);
+                                // ALWAYS set status to verified if transaction exists on chain
+                                console.log(`✅ Payment ${paymentId} has verified transaction on blockchain, FORCING status to verified`);
                                 payment.status = 'verified';
                                 payment.confirmedAt = verifyData.result.blockTime ? verifyData.result.blockTime * 1000 : Date.now();
                                 payment.blockTime = verifyData.result.blockTime;
                                 payment.slot = verifyData.result.slot;
                                 
-                                // Update in memory
+                                // Update in memory IMMEDIATELY
                                 payments.set(paymentId, payment);
                                 
-                                // Also update Google Sheets
-                                try {
-                                    const baseUrl = process.env.URL || 'https://zecit.online';
-                                    const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
-                                    await fetch(sheetsProxyUrl, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            payment: payment,
-                                            sheetId: process.env.GOOGLE_SHEET_ID || '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8',
-                                            sheetName: 'payment'
-                                        })
-                                    });
+                                // Also update Google Sheets in background (don't wait)
+                                const baseUrl = process.env.URL || 'https://zecit.online';
+                                const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
+                                fetch(sheetsProxyUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        payment: payment,
+                                        sheetId: process.env.GOOGLE_SHEET_ID || '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8',
+                                        sheetName: 'payment'
+                                    })
+                                }).then(() => {
                                     console.log(`✅ Updated payment ${paymentId} status to verified in Google Sheets`);
-                                } catch (sheetError) {
+                                }).catch(sheetError => {
                                     console.warn(`⚠️ Failed to update Google Sheet:`, sheetError);
-                                }
+                                });
+                            } else {
+                                // Transaction not found or failed - keep current status
+                                console.log(`⚠️ Payment ${paymentId} transaction ${payment.transactionSignature} not found or failed on blockchain`);
                             }
                         }
                     } catch (verifyError) {
@@ -357,21 +361,17 @@ exports.handler = async (event, context) => {
             
             // Update payment with REAL blockchain data
             payment.transactionSignature = txSignature;
-            payment.status = blockchainVerified ? 'verified' : (body.status || 'pending');
-            payment.confirmedAt = blockTime ? blockTime * 1000 : (body.confirmedAt || Date.now());
+            // CRITICAL: If blockchain verified, ALWAYS set to verified. Otherwise use body.status or keep current.
+            payment.status = blockchainVerified ? 'verified' : (body.status || payment.status || 'pending');
+            payment.confirmedAt = blockTime ? blockTime * 1000 : (body.confirmedAt || payment.confirmedAt || Date.now());
             payment.blockTime = blockTime;
             payment.slot = slot;
             payments.set(paymentId, payment);
             
-            console.log(`✅ Payment ${paymentId} updated with signature: ${txSignature}`);
-            console.log(`   Status: ${payment.status} (${blockchainVerified ? 'blockchain verified' : 'pending verification'})`);
-            console.log(`   Confirmed: ${new Date(payment.confirmedAt).toISOString()}`);
-            console.log(`   Payment object:`, JSON.stringify({
-                id: payment.id,
-                status: payment.status,
-                transactionSignature: payment.transactionSignature,
-                confirmedAt: payment.confirmedAt
-            }, null, 2));
+            console.log(`[Oracle Payments] ✅ Payment ${paymentId} updated in memory`);
+            console.log(`[Oracle Payments]    Status: ${payment.status} (${blockchainVerified ? 'BLOCKCHAIN VERIFIED' : body.status || 'pending'})`);
+            console.log(`[Oracle Payments]    Signature: ${txSignature}`);
+            console.log(`[Oracle Payments]    Confirmed: ${new Date(payment.confirmedAt).toISOString()}`);
             
             // Also save to Google Sheets immediately - FORCE UPDATE
             try {
@@ -379,17 +379,16 @@ exports.handler = async (event, context) => {
                 const baseUrl = process.env.URL || 'https://zecit.online';
                 const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
                 
-                console.log(`💾 Saving verified payment ${paymentId} to Google Sheets via: ${sheetsProxyUrl}`);
-                console.log(`   Payment data: id=${payment.id}, status=${payment.status}, signature=${payment.transactionSignature}`);
-                console.log(`   Full payment object being sent:`, JSON.stringify(payment, null, 2));
+                console.log(`[Oracle Payments] 💾 Saving payment ${paymentId} to Google Sheets`);
+                console.log(`[Oracle Payments]    Status: ${payment.status}, Signature: ${payment.transactionSignature}`);
                 
-                // Ensure payment has all required fields
+                // Ensure payment has all required fields - use the status we just set
                 const paymentToSave = {
                     ...payment,
                     id: payment.id || paymentId,
-                    status: payment.status || (blockchainVerified ? 'verified' : 'pending'),
+                    status: payment.status, // Use the status we just determined
                     transactionSignature: payment.transactionSignature || txSignature || '',
-                    confirmedAt: payment.confirmedAt || (blockchainVerified ? Date.now() : null),
+                    confirmedAt: payment.confirmedAt || Date.now(),
                     createdAt: payment.createdAt || Date.now()
                 };
                 
@@ -409,28 +408,38 @@ exports.handler = async (event, context) => {
                 
                 if (saveResponse.ok) {
                     const saveResult = await saveResponse.json();
-                    console.log(`✅ Payment ${paymentId} verified and saved to Google Sheets`);
-                    console.log(`   Sheet ID: ${saveResult.sheetId || 'N/A'}`);
-                    console.log(`   Sheet URL: ${saveResult.sheetUrl || 'N/A'}`);
+                    console.log(`[Oracle Payments] ✅ Payment ${paymentId} saved to Google Sheets successfully`);
+                    console.log(`[Oracle Payments]    Sheet ID: ${saveResult.sheetId || 'N/A'}`);
                 } else {
                     const errorText = await saveResponse.text();
-                    console.error(`⚠️ Failed to save verified payment to sheets:`, errorText);
-                    console.error(`   Status: ${saveResponse.status}`);
-                    console.error(`   Payment ID: ${paymentId}, Signature: ${signature}`);
+                    console.error(`[Oracle Payments] ❌ Failed to save: HTTP ${saveResponse.status}`);
+                    console.error(`[Oracle Payments]    Error: ${errorText}`);
+                    console.error(`[Oracle Payments]    Payment ID: ${paymentId}, Status: ${payment.status}, Signature: ${txSignature}`);
                 }
             } catch (err) {
-                console.error(`❌ Error saving verified payment to sheets:`, err);
-                console.error(`   Payment ID: ${paymentId}, Signature: ${signature}`);
+                console.error(`[Oracle Payments] ❌ Error saving to sheets:`, err);
+                console.error(`[Oracle Payments]    Payment ID: ${paymentId}, Signature: ${txSignature}`);
                 // Don't fail the verification if sheets save fails
             }
             
+            // Return the updated payment with verified status
             return {
                 statusCode: 200,
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ success: true, payment })
+                body: JSON.stringify({ 
+                    success: true, 
+                    payment: {
+                        ...payment,
+                        status: payment.status, // Ensure status is included
+                        transactionSignature: payment.transactionSignature,
+                        confirmedAt: payment.confirmedAt
+                    },
+                    message: blockchainVerified ? 'Payment verified on blockchain' : 'Payment updated',
+                    blockchainVerified: blockchainVerified
+                })
             };
         } else {
             return {

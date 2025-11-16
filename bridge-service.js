@@ -73,17 +73,13 @@ class ZcashSolanaBridge {
             }
             
             
-            await this.initZcashConnection();
+            // Zcash functionality disabled - using Solana only
+            // Skip Zcash initialization to avoid 405 errors
+            // await this.initZcashConnection();
             
-            
+            // Set a dummy address to prevent errors
             if (!this.shieldedPoolAddress) {
-                const address = await this.getZcashShieldedAddress();
-                if (address) {
-                    this.shieldedPoolAddress = address;
-                } else {
-                    
-                    this.shieldedPoolAddress = 'zt1test' + Math.random().toString(36).substring(2, 15);
-                }
+                this.shieldedPoolAddress = 'zt1disabled';
             }
             
             
@@ -557,7 +553,9 @@ class ZcashSolanaBridge {
     }
     
     async getZcashShieldedAddress() {
-        return await this.zcashRpcCall('z_getnewaddress', [], 2);
+        // Zcash functionality disabled - using Solana only
+        // Return null to skip Zcash initialization
+        return null;
     }
     
     async sendZcashToPool(amount, memo = '') {
