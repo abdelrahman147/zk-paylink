@@ -639,27 +639,37 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
             const rows = data.values || [];
             
             const payments = rows.map(row => {
+                // Ensure row has enough columns
+                if (!row || row.length < 12) {
+                    // Pad row with empty strings if needed
+                    while (row.length < 12) {
+                        row.push('');
+                    }
+                }
+                
                 let proof = null;
                 try {
-                    if (row[11]) {
+                    if (row[11] && row[11].trim()) {
                         proof = JSON.parse(row[11]);
                     }
                 } catch (e) {
-                    // Invalid JSON, ignore
+                    // Invalid JSON, set to empty object
+                    console.warn(`Failed to parse proof JSON for payment ${row[0]}:`, e.message);
+                    proof = {};
                 }
                 
                 const payment = {
                     id: row[0] || '',
-                    amount: parseFloat(row[1] || 0),
+                    amount: parseFloat(row[1] || 0) || 0,
                     currency: row[2] || 'USD',
                     token: row[3] || 'SOL',
-                    solAmount: parseFloat(row[4] || 0),
+                    solAmount: parseFloat(row[4] || 0) || 0,
                     orderId: row[5] || '',
                     merchantAddress: row[6] || '',
                     status: row[7] || 'pending',
                     transactionSignature: row[8] || '',
-                    createdAt: new Date(row[9] || Date.now()).getTime(),
-                    confirmedAt: row[10] ? new Date(row[10]).getTime() : null,
+                    createdAt: row[9] ? (new Date(row[9]).getTime() || Date.now()) : Date.now(),
+                    confirmedAt: row[10] && row[10].trim() ? new Date(row[10]).getTime() : null,
                     proof: proof
                 };
                 
