@@ -219,6 +219,9 @@ exports.handler = async (event, context) => {
             payment.confirmedAt = Date.now();
             payments.set(paymentId, payment);
             
+            console.log(`✅ Payment ${paymentId} verified with signature: ${signature}`);
+            console.log(`   Status: ${payment.status}, Confirmed: ${new Date(payment.confirmedAt).toISOString()}`);
+            
             // Also save to Google Sheets immediately
             try {
                 // Construct the sheets-proxy URL correctly for Netlify
@@ -226,6 +229,7 @@ exports.handler = async (event, context) => {
                 const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
                 
                 console.log(`💾 Saving verified payment ${paymentId} to Google Sheets via: ${sheetsProxyUrl}`);
+                console.log(`   Payment data: id=${payment.id}, status=${payment.status}, signature=${payment.transactionSignature}`);
                 
                 const saveResponse = await fetch(sheetsProxyUrl, {
                     method: 'POST',
@@ -243,13 +247,16 @@ exports.handler = async (event, context) => {
                     const saveResult = await saveResponse.json();
                     console.log(`✅ Payment ${paymentId} verified and saved to Google Sheets`);
                     console.log(`   Sheet ID: ${saveResult.sheetId || 'N/A'}`);
+                    console.log(`   Sheet URL: ${saveResult.sheetUrl || 'N/A'}`);
                 } else {
                     const errorText = await saveResponse.text();
                     console.error(`⚠️ Failed to save verified payment to sheets:`, errorText);
                     console.error(`   Status: ${saveResponse.status}`);
+                    console.error(`   Payment ID: ${paymentId}, Signature: ${signature}`);
                 }
             } catch (err) {
                 console.error(`❌ Error saving verified payment to sheets:`, err);
+                console.error(`   Payment ID: ${paymentId}, Signature: ${signature}`);
                 // Don't fail the verification if sheets save fails
             }
             
