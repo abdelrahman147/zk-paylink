@@ -14,7 +14,8 @@
         oracle = new SolanaPaymentOracle({
             baseUrl: window.location.origin,
             merchantAddress: localStorage.getItem('sol_merchant_address'),
-            confirmationThreshold: parseInt(localStorage.getItem('sol_confirmation_threshold')) || 1
+            confirmationThreshold: parseInt(localStorage.getItem('sol_confirmation_threshold')) || 1,
+            solanaRpcUrl: 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5' // Use Alchemy RPC
         });
         
         // Expose oracle to window for global access

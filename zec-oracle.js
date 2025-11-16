@@ -19,8 +19,10 @@ class SolanaPaymentOracle {
     async initSolana() {
         if (typeof window !== 'undefined' && window.SolanaWeb3) {
             try {
-                const rpcUrl = this.solanaRpcUrl || 'https://api.mainnet-beta.solana.com';
+                // Use Alchemy RPC as default (most reliable)
+                const rpcUrl = this.solanaRpcUrl || 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5';
                 this.solanaConnection = new window.SolanaWeb3.Connection(rpcUrl, 'confirmed');
+                console.log(`✅ Solana connection initialized with Alchemy RPC`);
             } catch (error) {
                 console.warn('Solana initialization failed:', error);
             }
