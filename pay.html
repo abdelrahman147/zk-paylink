@@ -819,34 +819,51 @@
             
             console.log('🔄 Starting payment status polling for:', paymentId);
             
+            let pollCount = 0;
+            const maxPolls = 120; // 10 minutes (120 * 5 seconds)
+            
             // Poll every 5 seconds to check if payment is verified
             statusPollInterval = setInterval(async () => {
+                pollCount++;
                 try {
                     const response = await fetch(`/api/oracle/payments/${paymentId}`);
                     if (response.ok) {
                         const data = await response.json();
-                        if (data.payment && data.payment.status === 'verified') {
+                        const payment = data.payment;
+                        
+                        // Check if payment is verified (by status or by having a transaction signature)
+                        if (payment && (payment.status === 'verified' || payment.transactionSignature)) {
                             console.log('✅ Payment verified! Updating page...');
                             clearInterval(statusPollInterval);
                             statusPollInterval = null;
                             
                             // Reload payment link to show verified status
                             loadPaymentLink();
+                            return;
                         }
+                        
+                        // Log progress every 30 seconds (6 polls)
+                        if (pollCount % 6 === 0) {
+                            console.log(`🔄 Still polling... (${pollCount * 5}s elapsed, status: ${payment?.status || 'unknown'})`);
+                        }
+                    } else if (response.status === 404) {
+                        // Payment not found - might have been deleted or expired
+                        console.warn('⚠️ Payment not found, stopping polling');
+                        clearInterval(statusPollInterval);
+                        statusPollInterval = null;
                     }
                 } catch (error) {
                     console.warn('Error polling payment status:', error);
+                    // Don't stop on network errors, keep trying
                 }
-            }, 5000); // Check every 5 seconds
-            
-            // Stop polling after 5 minutes
-            setTimeout(() => {
-                if (statusPollInterval) {
+                
+                // Stop polling after max attempts
+                if (pollCount >= maxPolls) {
                     clearInterval(statusPollInterval);
                     statusPollInterval = null;
-                    console.log('⏹️ Stopped payment status polling (timeout)');
+                    console.log('⏹️ Stopped payment status polling (timeout after 10 minutes)');
                 }
-            }, 5 * 60 * 1000); // 5 minutes
+            }, 5000); // Check every 5 seconds
         }
         
         // Also poll on page load if payment is pending

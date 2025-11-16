@@ -44,6 +44,31 @@
     }
     
     function setupOracleEventListeners() {
+        // Tab switching
+        document.querySelectorAll('.merchant-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                // Update tabs
+                document.querySelectorAll('.merchant-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.merchant-tab-content').forEach(c => c.classList.remove('active'));
+                const content = document.getElementById(`merchant-${tabName}`);
+                if (content) {
+                    content.classList.add('active');
+                }
+                
+                // Load tab-specific data
+                if (tabName === 'payments') {
+                    loadOracleData();
+                } else if (tabName === 'overview') {
+                    loadOracleData();
+                }
+            });
+        });
+        
         // Payment filter dropdown
         const paymentFilter = document.getElementById('payment-filter');
         if (paymentFilter) {
@@ -179,6 +204,20 @@
                 // Remove any existing modals first
                 document.querySelectorAll('.checkout-modal').forEach(m => m.remove());
                 showCreatePaymentModal();
+            });
+        }
+        
+        // View All Payments button - switch to payments tab
+        const viewPaymentsBtn = document.getElementById('view-payments-btn');
+        if (viewPaymentsBtn) {
+            viewPaymentsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Switch to payments tab
+                const paymentsTab = document.querySelector('[data-tab="payments"]');
+                if (paymentsTab) {
+                    paymentsTab.click();
+                }
             });
         }
     }

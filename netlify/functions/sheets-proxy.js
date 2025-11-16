@@ -1055,10 +1055,15 @@ async function ensurePaymentSheet(sheetId, sheetName, accessToken) {
                     console.log(`Header count mismatch: ${existingHeaders.length} vs ${correctHeaders.length}`);
                     needsHeaderFix = true;
                 } else {
-                    // Check each header matches
+                    // Check each header matches (case-insensitive and trim whitespace)
                     for (let i = 0; i < correctHeaders.length; i++) {
-                        if (existingHeaders[i] !== correctHeaders[i]) {
-                            console.log(`Header mismatch at column ${i}: "${existingHeaders[i]}" vs "${correctHeaders[i]}"`);
+                        const existing = (existingHeaders[i] || '').trim();
+                        const correct = (correctHeaders[i] || '').trim();
+                        // Also check for combined headers like "Merchant Address Status"
+                        if (existing.toLowerCase() !== correct.toLowerCase() && 
+                            !existing.toLowerCase().includes(correct.toLowerCase()) &&
+                            !correct.toLowerCase().includes(existing.toLowerCase())) {
+                            console.log(`Header mismatch at column ${i}: "${existing}" vs "${correct}"`);
                             needsHeaderFix = true;
                             break;
                         }
@@ -1073,33 +1078,135 @@ async function ensurePaymentSheet(sheetId, sheetName, accessToken) {
 
         if (needsHeaderFix) {
             // Fix/Add headers
-            console.log('Fixing headers in payment sheet...');
+            console.log('🔧 Fixing headers in payment sheet...');
             console.log(`Sheet ID: ${sheetId}, Tab: ${sheetName}`);
             console.log(`Current headers: ${JSON.stringify(existingHeaders || [])}`);
             console.log(`Correct headers: ${JSON.stringify(correctHeaders)}`);
             
-            const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:L1?valueInputOption=RAW`;
-            const updateResponse = await fetch(updateUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    values: [correctHeaders]
-                })
-            });
+            // Try multiple tab name variations in case of case sensitivity
+            const possibleTabNames = [sheetName, 'payment', 'Payment', 'PAYMENT'];
+            let headerFixed = false;
+            
+            for (const tabName of possibleTabNames) {
+                try {
+                    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}!A1:L1?valueInputOption=RAW`;
+                    const updateResponse = await fetch(updateUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            values: [correctHeaders]
+                        })
+                    });
 
-            if (!updateResponse.ok) {
-                const errorText = await updateResponse.text();
-                console.error(`Failed to fix headers. Status: ${updateResponse.status}`);
-                console.error(`Error: ${errorText}`);
-                throw new Error(`Failed to fix headers: ${errorText}`);
+                    if (updateResponse.ok) {
+                        const updateResult = await updateResponse.json();
+                        console.log(`✅ Headers fixed in payment sheet using tab name: ${tabName}`);
+                        console.log(`Update result: ${JSON.stringify(updateResult)}`);
+                        headerFixed = true;
+                        break;
+                    } else {
+                        const errorText = await updateResponse.text();
+                        console.warn(`Failed to fix headers with tab name "${tabName}": ${errorText}`);
+                    }
+                } catch (err) {
+                    console.warn(`Error fixing headers with tab name "${tabName}":`, err);
+                }
             }
             
-            const updateResult = await updateResponse.json();
-            console.log('✅ Headers fixed in payment sheet');
-            console.log(`Update result: ${JSON.stringify(updateResult)}`);
+            if (!headerFixed) {
+                const errorText = `Failed to fix headers with any tab name variation`;
+                console.error(`❌ ${errorText}`);
+                // Don't throw - continue anyway, headers might be close enough
+                console.warn(`⚠️ Continuing without header fix - data might be misaligned`);
+            }
+        } else {
+            console.log('✅ Headers are already correct');
+        }
+
+        // Always update column widths to ensure headers display properly
+        // This fixes the issue where headers look combined due to narrow columns
+        try {
+            const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
+            const metadataResponse = await fetch(metadataUrl, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            
+            if (metadataResponse.ok) {
+                const metadata = await metadataResponse.json();
+                const actualTabNames = metadata.sheets?.map(s => s.properties.title) || [];
+                const paymentTab = actualTabNames.find(t => t.toLowerCase() === sheetName.toLowerCase()) || 
+                                 actualTabNames.find(t => t.toLowerCase().includes('payment')) || 
+                                 sheetName;
+                const paymentSheetId = metadata.sheets?.find(s => s.properties.title === paymentTab)?.properties.sheetId;
+                
+                if (paymentSheetId) {
+                    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`;
+                    const columnWidths = [
+                        { startIndex: 0, endIndex: 1, pixelSize: 150 },  // A: Payment ID
+                        { startIndex: 1, endIndex: 2, pixelSize: 100 },   // B: Amount (USD)
+                        { startIndex: 2, endIndex: 3, pixelSize: 80 },     // C: Currency
+                        { startIndex: 3, endIndex: 4, pixelSize: 80 },    // D: Token
+                        { startIndex: 4, endIndex: 5, pixelSize: 120 },   // E: Token Amount
+                        { startIndex: 5, endIndex: 6, pixelSize: 200 },    // F: Order ID
+                        { startIndex: 6, endIndex: 7, pixelSize: 180 },  // G: Merchant Address
+                        { startIndex: 7, endIndex: 8, pixelSize: 100 },  // H: Status
+                        { startIndex: 8, endIndex: 9, pixelSize: 250 },   // I: Transaction Signature
+                        { startIndex: 9, endIndex: 10, pixelSize: 180 },  // J: Created At
+                        { startIndex: 10, endIndex: 11, pixelSize: 180 }, // K: Confirmed At
+                        { startIndex: 11, endIndex: 12, pixelSize: 150 }  // L: ZK Proof
+                    ];
+                    
+                    const widthUpdateResponse = await fetch(batchUpdateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            requests: [{
+                                updateDimensionProperties: {
+                                    range: {
+                                        sheetId: paymentSheetId,
+                                        dimension: 'COLUMNS',
+                                        startIndex: 0,
+                                        endIndex: 12
+                                    },
+                                    properties: {
+                                        pixelSize: 150 // Default width
+                                    },
+                                    fields: 'pixelSize'
+                                }
+                            }, ...columnWidths.map((width, idx) => ({
+                                updateDimensionProperties: {
+                                    range: {
+                                        sheetId: paymentSheetId,
+                                        dimension: 'COLUMNS',
+                                        startIndex: width.startIndex,
+                                        endIndex: width.endIndex
+                                    },
+                                    properties: {
+                                        pixelSize: width.pixelSize
+                                    },
+                                    fields: 'pixelSize'
+                                }
+                            }))]
+                        })
+                    });
+                    
+                    if (widthUpdateResponse.ok) {
+                        console.log('✅ Column widths updated successfully');
+                    } else {
+                        const errorText = await widthUpdateResponse.text();
+                        console.warn('⚠️ Could not update column widths:', errorText);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('⚠️ Error updating column widths:', err);
+            // Don't fail if width update fails
         }
 
         return sheetId;

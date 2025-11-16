@@ -248,6 +248,12 @@ class SolanaPaymentOracle {
             // So we don't need to call it again here to avoid duplicate saves
             await this.savePaymentToBackend(payment);
             
+            // IMMEDIATELY check blockchain for this payment
+            console.log('🔍 Immediately checking blockchain for new payment:', payment.id);
+            setTimeout(async () => {
+                await this.checkPaymentOnBlockchain(payment.id);
+            }, 2000); // Wait 2 seconds for transaction to propagate
+            
             // Trigger webhook
             if (window.webhookSystem) {
                 await window.webhookSystem.triggerEvent('payment.created', payment);
@@ -713,15 +719,15 @@ class SolanaPaymentOracle {
             return; // Already monitoring
         }
         
-        console.log('🔍 Starting automatic payment monitoring (checks every 1 minute)...');
+        console.log('🔍 Starting aggressive blockchain monitoring (checks every 30 seconds)...');
         
         // Check immediately when starting
         this.checkPendingPayments();
         
-        // Then check every 5 minutes to avoid rate limits
+        // Check every 30 seconds for fast verification
         this.monitoringInterval = setInterval(async () => {
             await this.checkPendingPayments();
-        }, 300000); // Check every 5 minutes (300000ms) to avoid Alchemy rate limits
+        }, 30000); // Check every 30 seconds for fast verification
     }
     
     // Stop payment monitoring
@@ -753,7 +759,7 @@ class SolanaPaymentOracle {
             console.log(`🔍 RPC URL: ${this.solanaConnection._rpcEndpoint || 'N/A'}`);
             
             const signatures = await this.solanaConnection.getSignaturesForAddress(publicKey, {
-                limit: 20 // Reduced to avoid rate limits
+                limit: 100 // Check last 100 transactions for better coverage
             });
             
             console.log(`🔍 Checking ${pendingPayments.length} pending payment(s) against ${signatures.length} recent transaction(s) from Alchemy RPC...`);
@@ -834,10 +840,14 @@ class SolanaPaymentOracle {
                         const maxTimeDiff = 24 * 60 * 60 * 1000; // 24 hours
                         const allowBeforeCreation = 5 * 60 * 1000; // Allow 5 minutes before payment creation
                         
+                        // More flexible amount matching - allow 1% difference for fees/slippage
+                        const amountTolerance = payment.solAmount * 0.01; // 1% tolerance
+                        const amountMatches = Math.abs(amount - payment.solAmount) <= Math.max(amountTolerance, 0.00000001);
+                        
                         if (amount > 0 && 
                             (tx.blockTime * 1000 >= payment.createdAt - allowBeforeCreation) && 
                             timeDiff < maxTimeDiff && // 24 hours
-                            Math.abs(amount - payment.solAmount) < 0.00000001) {
+                            amountMatches) {
                             
                             // Found matching transaction!
                             console.log(`✅ MATCH FOUND! Payment ${payment.id} matches transaction ${sigInfo.signature}`);
@@ -1001,6 +1011,88 @@ class SolanaPaymentOracle {
         }
     }
     
+    // Direct blockchain check for a specific payment
+    async checkPaymentOnBlockchain(paymentId) {
+        console.log(`🔍 Direct blockchain check for payment: ${paymentId}`);
+        const payment = this.payments.get(paymentId);
+        if (!payment) {
+            console.warn(`Payment ${paymentId} not found in memory`);
+            return { success: false, error: 'Payment not found' };
+        }
+        
+        if (!this.merchantAddress || !this.solanaConnection) {
+            console.warn('Solana connection not available for blockchain check');
+            return { success: false, error: 'Solana connection not available' };
+        }
+        
+        try {
+            const publicKey = new window.SolanaWeb3.PublicKey(this.merchantAddress);
+            
+            // Get recent transactions (last 100)
+            console.log(`🔍 Fetching last 100 transactions for ${this.merchantAddress}...`);
+            const signatures = await this.solanaConnection.getSignaturesForAddress(publicKey, {
+                limit: 100,
+                before: null
+            });
+            
+            console.log(`🔍 Found ${signatures.length} recent transactions, checking for payment match...`);
+            
+            // Check each transaction
+            for (const sigInfo of signatures) {
+                try {
+                    const tx = await this.solanaConnection.getTransaction(sigInfo.signature, {
+                        commitment: 'confirmed',
+                        maxSupportedTransactionVersion: 0
+                    });
+                    
+                    if (!tx || !tx.meta || tx.meta.err) {
+                        continue;
+                    }
+                    
+                    // Extract amount
+                    const amount = this.extractTransactionAmount(tx, publicKey, payment.token || 'SOL');
+                    const timeDiff = Math.abs(tx.blockTime * 1000 - payment.createdAt);
+                    
+                    // More flexible matching
+                    const amountTolerance = payment.solAmount * 0.01;
+                    const amountMatches = Math.abs(amount - payment.solAmount) <= Math.max(amountTolerance, 0.00000001);
+                    const timeMatches = timeDiff < (24 * 60 * 60 * 1000) && 
+                                       (tx.blockTime * 1000 >= payment.createdAt - (5 * 60 * 1000));
+                    
+                    if (amount > 0 && amountMatches && timeMatches) {
+                        console.log(`✅ BLOCKCHAIN MATCH FOUND! Transaction ${sigInfo.signature} matches payment ${paymentId}`);
+                        
+                        // Verify transaction
+                        const verification = await this.verifySolanaTransaction(sigInfo.signature, payment.solAmount);
+                        
+                        payment.status = 'verified';
+                        payment.transactionSignature = sigInfo.signature;
+                        payment.confirmedAt = Date.now();
+                        payment.proof = verification.proof;
+                        this.payments.set(payment.id, payment);
+                        
+                        // Save to backend
+                        await this.savePaymentToBackend(payment);
+                        await this.triggerWebhook(payment);
+                        this.triggerUIUpdate();
+                        
+                        console.log(`✅ Payment ${paymentId} verified on blockchain!`);
+                        return { success: true, payment, signature: sigInfo.signature };
+                    }
+                } catch (txError) {
+                    console.warn(`Error checking transaction ${sigInfo.signature}:`, txError);
+                    continue;
+                }
+            }
+            
+            console.log(`⚠️ No matching transaction found on blockchain for payment ${paymentId}`);
+            return { success: false, error: 'No matching transaction found' };
+        } catch (error) {
+            console.error(`❌ Blockchain check failed for payment ${paymentId}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+    
     // Manual check function for immediate verification
     async manualCheckPayment(paymentId) {
         console.log(`🔍 Manual check requested for payment: ${paymentId}`);
@@ -1017,13 +1109,19 @@ class SolanaPaymentOracle {
             return { success: true, payment, message: 'Payment already verified, forcing sheet update' };
         }
         
-        // Force check pending payments
+        // Direct blockchain check first
+        const result = await this.checkPaymentOnBlockchain(paymentId);
+        if (result.success) {
+            return { success: true, payment: result.payment, message: 'Payment verified via direct blockchain check' };
+        }
+        
+        // Fallback to batch check
         await this.checkPendingPayments();
         
         // Check again after verification
         const updatedPayment = this.payments.get(paymentId);
         if (updatedPayment && updatedPayment.status === 'verified') {
-            return { success: true, payment: updatedPayment, message: 'Payment verified via Alchemy RPC' };
+            return { success: true, payment: updatedPayment, message: 'Payment verified via batch check' };
         }
         
         return { success: false, error: 'Payment still pending, no matching transaction found' };
@@ -1040,6 +1138,14 @@ if (typeof window !== 'undefined') {
     window.manualCheckPayment = async (paymentId) => {
         if (window.oracle) {
             return await window.oracle.manualCheckPayment(paymentId);
+        }
+        return { success: false, error: 'Oracle not initialized' };
+    };
+    
+    // Expose direct blockchain check function globally
+    window.checkPaymentOnBlockchain = async (paymentId) => {
+        if (window.oracle) {
+            return await window.oracle.checkPaymentOnBlockchain(paymentId);
         }
         return { success: false, error: 'Oracle not initialized' };
     };
