@@ -317,22 +317,65 @@
         // Try multiple possible container IDs
         const paymentsContainer = document.getElementById('payments-list') || 
                                   document.getElementById('merchant-payments-list');
-        if (!paymentsContainer) return;
-        
-        if (payments.length === 0) {
-            paymentsContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No payments yet</p>';
+        if (!paymentsContainer) {
+            console.warn('Payments container not found');
             return;
         }
         
-        // Sort by creation date (newest first)
-        const sortedPayments = [...payments].sort((a, b) => b.createdAt - a.createdAt);
+        if (payments.length === 0) {
+            paymentsContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No payments found</p>';
+            return;
+        }
         
-        paymentsContainer.innerHTML = sortedPayments.map(payment => {
-            const date = new Date(payment.createdAt);
-            const statusClass = payment.status === 'verified' ? 'success' : 
-                              payment.status === 'pending' ? 'warning' : 'error';
-            const statusText = payment.status.toUpperCase();
-            
+        // Sort by creation date (newest first), verified payments first
+        const sortedPayments = [...payments].sort((a, b) => {
+            // Verified payments first
+            if (a.status === 'verified' && b.status !== 'verified') return -1;
+            if (a.status !== 'verified' && b.status === 'verified') return 1;
+            // Then by date (newest first)
+            return b.createdAt - a.createdAt;
+        });
+        
+        // Separate verified and pending for better display
+        const verifiedPayments = sortedPayments.filter(p => p.status === 'verified');
+        const otherPayments = sortedPayments.filter(p => p.status !== 'verified');
+        
+        let html = '';
+        
+        // Show verified payments section if any exist
+        if (verifiedPayments.length > 0) {
+            html += `
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--accent-success); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.2rem;">✓</span>
+                        Verified Payments (${verifiedPayments.length})
+                    </h4>
+                    ${verifiedPayments.map(payment => renderPaymentCard(payment)).join('')}
+                </div>
+            `;
+        }
+        
+        // Show other payments
+        if (otherPayments.length > 0) {
+            html += `
+                <div>
+                    <h4 style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        ${verifiedPayments.length > 0 ? 'Other Payments' : 'All Payments'} (${otherPayments.length})
+                    </h4>
+                    ${otherPayments.map(payment => renderPaymentCard(payment)).join('')}
+                </div>
+            `;
+        }
+        
+        paymentsContainer.innerHTML = html;
+    }
+    
+    function renderPaymentCard(payment) {
+        const date = new Date(payment.createdAt);
+        const statusClass = payment.status === 'verified' ? 'success' : 
+                          payment.status === 'pending' ? 'warning' : 'error';
+        const statusText = payment.status.toUpperCase();
+        
         return `
             <div class="payment-card" style="background: var(--bg-secondary); border: 1px solid ${payment.status === 'verified' ? 'var(--accent-success)' : 'var(--border-color)'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; ${payment.status === 'verified' ? 'border-left: 4px solid var(--accent-success);' : ''}">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
