@@ -419,13 +419,15 @@
                         const rpcUrl = 'https://solana-mainnet.g.alchemy.com/v2/xXPi6FAKVWJqv9Ie5TgvOHQgTlrlfbp5';
                         const connection = new window.SolanaWeb3.Connection(rpcUrl, 'confirmed');
                         
-                        // Get recent blockhash
-                        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+                        // Get fresh blockhash right before creating transaction (to avoid expiration)
+                        payBtn.textContent = 'Getting latest blockhash...';
+                        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
                         
-                        // Create transaction
+                        // Create transaction with fresh blockhash
                         const transaction = new window.SolanaWeb3.Transaction({
                             feePayer: publicKey,
-                            recentBlockhash: blockhash
+                            recentBlockhash: blockhash,
+                            lastValidBlockHeight: lastValidBlockHeight
                         }).add(
                             window.SolanaWeb3.SystemProgram.transfer({
                                 fromPubkey: publicKey,
