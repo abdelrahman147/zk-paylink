@@ -342,9 +342,9 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 await createSheetTab(actualSheetId, sheetName, accessToken);
             }
             
-            // Check if payment already exists in the sheet (by Payment ID in column A)
-            // Read all payment IDs to find existing row
-            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A2:A`;
+            // Check if payment already exists in the sheet (by Payment ID in column A, or Order ID in column F as fallback)
+            // Read payment IDs (col A) and Order IDs (col F) to find existing row
+            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A2:F`;
             const readResponse = await fetch(readUrl, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
@@ -357,7 +357,7 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 const readData = await readResponse.json();
                 const rows = readData.values || [];
                 
-                console.log(`[Payment Storage] Checking ${rows.length} rows for payment ID: ${payment.id}`);
+                console.log(`[Payment Storage] Checking ${rows.length} rows for payment ID: ${payment.id}, Order ID: ${payment.orderId}`);
                 
                 // Find ALL rows with this payment ID (to handle duplicates and truncation)
                 // Match by exact payment ID OR by first part (in case of truncation in sheet)
@@ -368,6 +368,7 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 
                 for (let i = 0; i < rows.length; i++) {
                     const rowPaymentId = rows[i] && rows[i][0] ? String(rows[i][0]).trim() : '';
+                    const rowOrderId = rows[i] && rows[i][5] ? String(rows[i][5]).trim() : '';
                     
                     // Exact match
                     if (rowPaymentId === paymentIdToFind) {
@@ -387,6 +388,12 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                         duplicateRowIndices.push(rowIndex);
                         console.log(`[Payment Storage] ✅ Found REVERSE PREFIX match: sheet has "${rowPaymentId}", we have "${paymentIdToFind}" at row ${rowIndex}`);
                     }
+                    // FALLBACK: Match by Order ID if payment ID matching fails
+                    else if (payment.orderId && rowOrderId && rowOrderId === String(payment.orderId).trim()) {
+                        const rowIndex = i + 2;
+                        duplicateRowIndices.push(rowIndex);
+                        console.log(`[Payment Storage] ✅ Found ORDER ID match: "${rowOrderId}" at row ${rowIndex} (payment ID match failed, using Order ID fallback)`);
+                    }
                 }
                 
                 console.log(`[Payment Storage] Found ${duplicateRowIndices.length} matching row(s) for payment "${paymentIdToFind}"`);
@@ -394,6 +401,9 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 if (duplicateRowIndices.length > 0) {
                     // If there are duplicates, keep the FIRST one (oldest) and delete the rest
                     existingRowIndex = duplicateRowIndices[0];
+                    
+                    console.log(`[Payment Storage] ✅ FOUND EXISTING PAYMENT at row ${existingRowIndex}`);
+                    console.log(`[Payment Storage]    Will update this row with status: "${payment.status}", signature: "${payment.transactionSignature || 'N/A'}"`);
                     
                     if (duplicateRowIndices.length > 1) {
                         console.log(`[Payment Storage] Found ${duplicateRowIndices.length} duplicate rows for ${payment.id}. Will keep row ${existingRowIndex} and delete the rest.`);
@@ -531,12 +541,53 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                             console.log(`[Payment Storage]    Signature (col I): "${updatedRow[8] || 'MISSING'}"`);
                             console.log(`[Payment Storage]    Full row:`, updatedRow);
                             
-                            // If status or signature didn't update, log warning
+                            // CRITICAL: If status or signature didn't update, RETRY IMMEDIATELY
+                            let needsRetry = false;
                             if (updatedRow[7] !== payment.status) {
-                                console.error(`[Payment Storage] ❌ STATUS MISMATCH! Expected "${payment.status}", got "${updatedRow[7]}"`);
+                                console.error(`[Payment Storage] ❌❌❌ CRITICAL STATUS MISMATCH! Expected "${payment.status}", got "${updatedRow[7]}"`);
+                                needsRetry = true;
                             }
                             if (updatedRow[8] !== payment.transactionSignature && payment.transactionSignature) {
-                                console.error(`[Payment Storage] ❌ SIGNATURE MISMATCH! Expected "${payment.transactionSignature}", got "${updatedRow[8]}"`);
+                                console.error(`[Payment Storage] ❌❌❌ CRITICAL SIGNATURE MISMATCH! Expected "${payment.transactionSignature}", got "${updatedRow[8]}"`);
+                                needsRetry = true;
+                            }
+                            
+                            // RETRY if mismatch detected
+                            if (needsRetry) {
+                                console.log(`[Payment Storage] 🔄 RETRYING UPDATE in 1 second...`);
+                                setTimeout(async () => {
+                                    try {
+                                        const retryUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}?valueInputOption=RAW`;
+                                        const retryResponse = await fetch(retryUrl, {
+                                            method: 'PUT',
+                                            headers: {
+                                                'Authorization': `Bearer ${accessToken}`,
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({ values: [values] })
+                                        });
+                                        if (retryResponse.ok) {
+                                            console.log(`[Payment Storage] ✅ RETRY SUCCESS`);
+                                            // Verify again after retry
+                                            await new Promise(resolve => setTimeout(resolve, 1000));
+                                            const verifyRetryUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}`;
+                                            const verifyRetryResponse = await fetch(verifyRetryUrl, {
+                                                headers: { 'Authorization': `Bearer ${accessToken}` }
+                                            });
+                                            if (verifyRetryResponse.ok) {
+                                                const verifyRetryData = await verifyRetryResponse.json();
+                                                const retryRow = verifyRetryData.values?.[0] || [];
+                                                console.log(`[Payment Storage] ✅ RETRY VERIFICATION - Status: "${retryRow[7]}", Signature: "${retryRow[8]}"`);
+                                            }
+                                        } else {
+                                            console.error(`[Payment Storage] ❌ RETRY FAILED:`, await retryResponse.text());
+                                        }
+                                    } catch (retryErr) {
+                                        console.error(`[Payment Storage] ❌ RETRY ERROR:`, retryErr);
+                                    }
+                                }, 1000);
+                            } else {
+                                console.log(`[Payment Storage] ✅✅✅ VERIFICATION SUCCESS - Status and signature match!`);
                             }
                         } else {
                             console.warn(`[Payment Storage] Could not verify update: HTTP ${verifyResponse.status}`);
