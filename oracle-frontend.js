@@ -332,9 +332,6 @@
         // Calculate stats from verified payments only (permanent ones)
         const verifiedPayments = payments.filter(p => p.status === 'verified');
         
-        const totalSOL = verifiedPayments
-            .reduce((sum, p) => sum + (p.solAmount || 0), 0);
-        
         // Calculate all-time volume in USD from verified payments
         const allTimeVolumeUSD = verifiedPayments
             .reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -343,13 +340,16 @@
         const proofCount = verifiedPayments.filter(p => p.proof).length;
         const pendingCount = payments.filter(p => p.status === 'pending').length;
         
-        const solEl = document.getElementById('stat-sol');
+        // Calculate Total Getbacks: 100 per verified transaction
+        const totalGetbacks = verifiedCount * 100;
+        
+        const getbacksEl = document.getElementById('stat-getbacks');
         const paymentsEl = document.getElementById('stat-payments');
         const proofsEl = document.getElementById('stat-proofs');
         const pendingEl = document.getElementById('stat-pending');
         const volumeEl = document.getElementById('stat-volume');
         
-        if (solEl) solEl.textContent = `${totalSOL.toFixed(8)} SOL`;
+        if (getbacksEl) getbacksEl.textContent = `$${totalGetbacks.toFixed(2)}`;
         if (paymentsEl) paymentsEl.textContent = verifiedCount;
         if (proofsEl) proofsEl.textContent = proofCount;
         if (pendingEl) pendingEl.textContent = pendingCount;
