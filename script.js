@@ -3,7 +3,7 @@
     
     // Simple SDK site functionality
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('CryptoCommerce SDK site initialized');
+        console.log('ZK Paytell site initialized');
         
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -82,8 +82,9 @@
                 const resp = await window.solana.connect({ onlyIfTrusted: false });
                 if (resp && resp.publicKey) {
                     // Initialize bridge if not exists
-                    if (!window.bridge && typeof ZcashSolanaBridge !== 'undefined') {
-                        window.bridge = new ZcashSolanaBridge();
+                    // Bridge service removed - using Solana payments only
+                    if (!window.bridge) {
+                        window.bridge = null; // No bridge needed
                         try {
                             await window.bridge.init();
                         } catch (e) {
@@ -228,8 +229,8 @@
             var antiCheat = null;
             
             // Initialize bridge
-            if (typeof ZcashSolanaBridge !== 'undefined') {
-                bridge = new ZcashSolanaBridge();
+            // Bridge service removed - using Solana payments only
+            bridge = null; // No bridge needed
                 window.bridge = bridge;
                 try {
                     await bridge.init();
