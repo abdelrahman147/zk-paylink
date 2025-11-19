@@ -223,56 +223,6 @@ sdk.on('payment.confirmed', (event) => {
     </section>
 
     
-    <!-- SOL Payment Oracle Section -->
-    <section id="oracle" class="section section-dark">
-        <div class="container">
-            <h2 class="section-title">Solana Payment Oracle</h2>
-            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem; max-width: 800px; margin-left: auto; margin-right: auto;">
-                Zero-Knowledge payment verification oracle for Solana transactions. 
-                Verify payments without revealing transaction details.
-            </p>
-            
-            <div class="oracle-features-grid">
-                <div class="oracle-feature-card">
-                    <div class="feature-icon">[ZK]</div>
-                    <h3>Zero-Knowledge Proofs</h3>
-                    <p>Verify payments without exposing transaction amounts or addresses</p>
-                </div>
-                <div class="oracle-feature-card">
-                    <div class="feature-icon">[RT]</div>
-                    <h3>Real-Time Verification</h3>
-                    <p>Instant payment confirmation using Solana blockchain transactions</p>
-                </div>
-                <div class="oracle-feature-card">
-                    <div class="feature-icon">[PRIV]</div>
-                    <h3>Privacy First</h3>
-                    <p>Complete transaction privacy with selective disclosure</p>
-                </div>
-                <div class="oracle-feature-card">
-                    <div class="feature-icon">[API]</div>
-                    <h3>Ecommerce Integration</h3>
-                    <p>Easy SDK integration for any ecommerce platform</p>
-                </div>
-            </div>
-            
-            <div class="oracle-demo">
-                <h3>Payment Verification</h3>
-                <div class="verification-form">
-                    <div class="checkout-form-group">
-                        <label>Payment ID</label>
-                        <input type="text" id="payment-id-input" placeholder="Enter payment ID to verify">
-                        </div>
-                    <div class="checkout-form-group">
-                        <label>Expected Amount (SOL)</label>
-                        <input type="number" id="expected-amount" step="0.00000001" placeholder="0.00000000">
-                    </div>
-                    <button class="btn-primary" id="verify-payment-btn">Verify Payment with ZK Proof</button>
-                    <div id="verification-result" style="margin-top: 1rem;"></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Merchant Dashboard Section -->
     <section id="merchant" class="section">
         <div class="container">
