@@ -12,3 +12,4 @@ console.log(`STAKING_POOL_PRIVATE_KEY=${bs58.encode(keypair.secretKey)}`);
 console.log('\nIMPORTANT: Keep the private key SECRET! Never commit it to git!');
 
 
+

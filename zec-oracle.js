@@ -27,7 +27,7 @@ class SolanaPaymentOracle {
                     const message = args.join(' ');
                     if ((message.includes('signatureSubscribe') || message.includes('Received JSON-RPC error calling')) && !errorSuppressed) {
                         errorSuppressed = true;
-                        console.warn('⚠️ Solana RPC subscription errors suppressed (WebSocket subscriptions not supported by HTTP RPC endpoint)');
+                        console.warn('[WARN] Solana RPC subscription errors suppressed (WebSocket subscriptions not supported by HTTP RPC endpoint)');
                         return;
                     }
                     originalConsoleError.apply(console, args);
@@ -44,7 +44,7 @@ class SolanaPaymentOracle {
                     console.error = originalConsoleError;
                 }, 3000);
                 
-                console.log(`✅ Solana connection initialized with Alchemy RPC`);
+                console.log(`[OK] Solana connection initialized with Alchemy RPC`);
             } catch (error) {
                 console.warn('Solana initialization failed:', error);
             }
@@ -260,8 +260,8 @@ class SolanaPaymentOracle {
                 console.log('🔄 PaymentStorage not initialized, attempting to initialize...');
                 const initialized = await this.initPaymentStorage();
                 if (!initialized) {
-                    console.error('❌ Failed to initialize PaymentStorage. Payment will not be saved to Google Sheets.');
-                    console.error('❌ Make sure payment-storage.js is loaded before zec-oracle.js');
+                    console.error('[ERR] Failed to initialize PaymentStorage. Payment will not be saved to Google Sheets.');
+                    console.error('[ERR] Make sure payment-storage.js is loaded before zec-oracle.js');
                 }
             }
             
@@ -271,7 +271,7 @@ class SolanaPaymentOracle {
             await this.savePaymentToBackend(payment);
             
             // IMMEDIATELY check blockchain for this payment
-            console.log('🔍 Immediately checking blockchain for new payment:', payment.id);
+            console.log('[CHECK] Immediately checking blockchain for new payment:', payment.id);
             setTimeout(async () => {
                 await this.checkPaymentOnBlockchain(payment.id);
             }, 2000); // Wait 2 seconds for transaction to propagate
@@ -296,12 +296,12 @@ class SolanaPaymentOracle {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.price && data.price > 0) {
-                        console.log(`✅ Got SOL price: $${data.price} (source: ${data.source || 'unknown'})`);
+                        console.log(`[OK] Got SOL price: $${data.price} (source: ${data.source || 'unknown'})`);
                         return data.price;
                     }
                 } else if (response.status === 503) {
                     // Service unavailable - retry
-                    console.warn(`⚠️ Price API unavailable (attempt ${attempt}/3), retrying...`);
+                    console.warn(`[WARN] Price API unavailable (attempt ${attempt}/3), retrying...`);
                     if (attempt < 3) {
                         await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
                         continue;
@@ -324,14 +324,14 @@ class SolanaPaymentOracle {
         if (typeof window !== 'undefined' && window.PaymentStorage) {
             try {
                 this.paymentStorage = new window.PaymentStorage();
-                console.log('✅ PaymentStorage initialized successfully');
+                console.log('[OK] PaymentStorage initialized successfully');
                 return true;
             } catch (error) {
-                console.error('❌ Failed to initialize PaymentStorage:', error);
+                console.error('[ERR] Failed to initialize PaymentStorage:', error);
                 return false;
             }
         } else {
-            console.warn('⚠️ PaymentStorage class not available. Make sure payment-storage.js is loaded.');
+            console.warn('[WARN] PaymentStorage class not available. Make sure payment-storage.js is loaded.');
             return false;
         }
     }
@@ -351,12 +351,12 @@ class SolanaPaymentOracle {
                 });
                 const verifiedCount = allPayments.filter(p => p.status === 'verified').length;
                 const pendingCount = allPayments.filter(p => p.status === 'pending').length;
-                console.log(`✅ Loaded ${allPayments.length} payments from Google Sheets (${verifiedCount} verified, ${pendingCount} pending)`);
+                console.log(`[OK] Loaded ${allPayments.length} payments from Google Sheets (${verifiedCount} verified, ${pendingCount} pending)`);
                 
         // Clean up expired payments and duplicates immediately after loading
         // This ensures expired payments and duplicates are removed as soon as they're loaded
         setTimeout(async () => {
-            console.log('🧹 Running automatic cleanup after loading payments...');
+            console.log('[CLEAN] Running automatic cleanup after loading payments...');
             await this.cleanupExpiredPayments();
             // Also clean up duplicates
             await this.cleanupDuplicatePayments();
@@ -390,20 +390,20 @@ class SolanaPaymentOracle {
                 const result = await this.paymentStorage.savePayment(payment);
                 if (result && result.success) {
                     if (payment.status === 'verified') {
-                        console.log(`✅ Verified payment ${payment.id} saved/updated in Google Sheets (used for all-time volume)`);
+                        console.log(`[OK] Verified payment ${payment.id} saved/updated in Google Sheets (used for all-time volume)`);
                         console.log(`   Transaction: ${payment.transactionSignature || 'N/A'}`);
                         console.log(`   Confirmed: ${payment.confirmedAt ? new Date(payment.confirmedAt).toLocaleString() : 'N/A'}`);
                     } else {
-                        console.log(`✅ Payment ${payment.id} saved to Google Sheets (status: ${payment.status})`);
+                        console.log(`[OK] Payment ${payment.id} saved to Google Sheets (status: ${payment.status})`);
                     }
                 } else {
-                    console.warn(`⚠️ Failed to save payment ${payment.id} to sheets:`, result?.error || 'Unknown error');
+                    console.warn(`[WARN] Failed to save payment ${payment.id} to sheets:`, result?.error || 'Unknown error');
                 }
             } catch (err) {
-                console.error(`❌ Error saving payment ${payment.id} to sheets:`, err);
+                console.error(`[ERR] Error saving payment ${payment.id} to sheets:`, err);
             }
         } else {
-            console.warn(`⚠️ PaymentStorage not initialized, cannot save payment ${payment.id} to Google Sheets`);
+            console.warn(`[WARN] PaymentStorage not initialized, cannot save payment ${payment.id} to Google Sheets`);
         }
     }
     
@@ -413,7 +413,7 @@ class SolanaPaymentOracle {
             return;
         }
         
-        console.log('🧹 Starting automatic payment cleanup (runs every 30 seconds)...');
+        console.log('[CLEAN] Starting automatic payment cleanup (runs every 30 seconds)...');
         
         // Run cleanup immediately
         setTimeout(async () => {
@@ -484,7 +484,7 @@ class SolanaPaymentOracle {
                 }
                 
                 if (expiredFromSheets.length > 0) {
-                    console.log(`✅ Cleaned up ${expiredFromSheets.length} expired pending payments from Google Sheets`);
+                    console.log(`[OK] Cleaned up ${expiredFromSheets.length} expired pending payments from Google Sheets`);
                 }
             } catch (error) {
                 console.warn('Failed to check Google Sheets for expired payments:', error);

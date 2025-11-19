@@ -6,66 +6,59 @@
 }
 
 :root {
-    --bg-primary: #0a0e1a;
-    --bg-secondary: #0f1419;
-    --bg-tertiary: #151b26;
-    --bg-code: #080b12;
-    --bg-terminal: rgba(8, 11, 18, 0.98);
-    --text-primary: #f0f9ff;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --accent-primary: #8be9fd;
-    --accent-secondary: #bd93f9;
-    --accent-success: #50fa7b;
-    --accent-warning: #f1fa8c;
-    --accent-error: #ff5555;
-    --accent-pink: #ff79c6;
-    --accent-orange: #ffb86c;
-    --border-color: rgba(139, 233, 253, 0.12);
-    --code-green: #50fa7b;
-    --code-blue: #8be9fd;
-    --code-purple: #bd93f9;
-    --code-yellow: #f1fa8c;
-    --code-red: #ff5555;
-    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* Pure Black & Green Terminal Theme */
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0a;
+    --bg-tertiary: #151515;
+    --bg-code: #000000;
+    --bg-terminal: #000000;
+    --text-primary: #00ff00;
+    --text-secondary: #00cc00;
+    --text-muted: #009900;
+    --accent-primary: #00ff00;
+    --accent-secondary: #00ff00;
+    --accent-success: #00ff00;
+    --accent-warning: #ffff00;
+    --accent-error: #ff0000;
+    --border-color: #003300;
+    --code-green: #00ff00;
+    --code-blue: #00ff00;
+    --code-purple: #00ff00;
+    --code-yellow: #ffff00;
+    --code-red: #ff0000;
+    --font-mono: 'Courier New', 'Consolas', 'Monaco', monospace;
+    --font-sans: 'Courier New', 'Consolas', monospace;
     
-    /* Glassmorphism */
-    --glass-bg: rgba(20, 28, 45, 0.65);
-    --glass-bg-strong: rgba(20, 28, 45, 0.85);
-    --glass-border: rgba(139, 233, 253, 0.12);
-    --glass-border-strong: rgba(139, 233, 253, 0.25);
-    --backdrop-blur: 20px;
-    --backdrop-blur-strong: 32px;
+    /* Terminal Style - No Glassmorphism */
+    --glass-bg: #0a0a0a;
+    --glass-bg-strong: #151515;
+    --glass-border: #003300;
+    --glass-border-strong: #006600;
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #8be9fd 0%, #bd93f9 100%);
-    --gradient-secondary: linear-gradient(135deg, #bd93f9 0%, #ff79c6 100%);
-    --gradient-success: linear-gradient(135deg, #50fa7b 0%, #8be9fd 100%);
+    /* Terminal Gradients - Green Only */
+    --gradient-primary: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+    --gradient-secondary: linear-gradient(135deg, #00cc00 0%, #009900 100%);
+    --gradient-success: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
     
-    /* Shadows */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 24px rgba(139, 233, 253, 0.3);
-    --shadow-glow-strong: 0 0 40px rgba(139, 233, 253, 0.5);
+    /* Terminal Shadows - Minimal */
+    --shadow-sm: 0 1px 2px rgba(0, 255, 0, 0.1);
+    --shadow-md: 0 2px 4px rgba(0, 255, 0, 0.15);
+    --shadow-lg: 0 4px 8px rgba(0, 255, 0, 0.2);
+    --shadow-xl: 0 8px 16px rgba(0, 255, 0, 0.25);
+    --shadow-glow: 0 0 8px rgba(0, 255, 0, 0.3);
+    --shadow-glow-strong: 0 0 16px rgba(0, 255, 0, 0.4);
 }
 
 body {
-    font-family: var(--font-sans);
-    background-color: var(--bg-primary);
-    background-image:
-        radial-gradient(circle at 20% 50%, rgba(139, 233, 253, 0.08), transparent 50%),
-        radial-gradient(circle at 80% 30%, rgba(189, 147, 249, 0.08), transparent 50%),
-        radial-gradient(circle at 50% 80%, rgba(255, 121, 198, 0.06), transparent 50%);
-    background-attachment: fixed;
-    background-size: 100% 100%;
+    font-family: var(--font-mono);
+    background-color: #000000;
+    background-image: none;
     color: var(--text-primary);
     line-height: 1.6;
     overflow-x: hidden;
     scroll-behavior: smooth;
     position: relative;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 /* IMPROVED LOADING STATES */
@@ -456,8 +449,9 @@ html {
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(139, 233, 253, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    background: #003300;
+    box-shadow: 0 0 16px rgba(0, 255, 0, 0.6);
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
 }
 
 .btn-primary:hover::before {
@@ -465,17 +459,16 @@ html {
 }
 
 .btn-secondary {
-    background: transparent;
-    color: var(--accent-primary);
-    border: 2px solid var(--accent-primary);
-    box-shadow: 0 0 16px rgba(139, 233, 253, 0.2);
+    background: #000000;
+    color: #00ff00;
+    border: 1px solid #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.2);
 }
 
 .btn-secondary:hover {
-    background: rgba(139, 233, 253, 0.1);
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 24px rgba(139, 233, 253, 0.4);
-    transform: translateY(-2px);
+    background: #003300;
+    box-shadow: 0 0 16px rgba(0, 255, 0, 0.4);
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
 }
 
 .btn-large {
@@ -4144,34 +4137,32 @@ pre code {
 .checkout-form-group textarea {
     width: 100%;
     padding: 0.875rem 1rem;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 8px;
-    color: var(--text-primary);
+    background: #000000;
+    border: 1px solid #003300;
+    border-radius: 0;
+    color: #00ff00;
     font-size: 0.9rem;
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     pointer-events: auto;
     z-index: 10;
     position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
+    box-shadow: 0 0 4px rgba(0, 255, 0, 0.1);
 }
 
 .checkout-form-group input:focus,
 .checkout-form-group select:focus,
 .checkout-form-group textarea:focus {
     outline: none;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(139, 233, 253, 0.1), var(--shadow-md);
-    background: var(--glass-bg-strong);
+    border-color: #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+    background: #001100;
 }
 
 .checkout-form-group input:hover,
 .checkout-form-group select:hover,
 .checkout-form-group textarea:hover {
-    border-color: var(--glass-border-strong);
+    border-color: #006600;
 }
 
 .shipping-options {

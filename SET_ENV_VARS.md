@@ -42,3 +42,4 @@ npm run set-netlify-env
 After setting the variables, check the function logs in Netlify to ensure the API key is being read correctly.
 
 
+
