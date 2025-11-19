@@ -494,7 +494,32 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                     // UPDATE existing row - FORCE UPDATE with all fields
                     console.log(`[Payment Storage] 🔄 FORCE UPDATING row ${existingRowIndex} for payment ${payment.id}`);
                     console.log(`[Payment Storage] Payment data: status=${payment.status}, signature=${payment.transactionSignature || 'N/A'}, confirmedAt=${payment.confirmedAt || 'N/A'}`);
+                    
+                    // Ensure ZK proof is exported (public only, no witness) for update
+                    let publicProof = {};
+                    if (payment.proof) {
+                        if (payment.proof._witness) {
+                            // Remove private witness data before saving
+                            publicProof = {
+                                id: payment.proof.id,
+                                commitment: payment.proof.commitment,
+                                challenge: payment.proof.challenge,
+                                response: payment.proof.response,
+                                signature: payment.proof.signature,
+                                expectedAmount: payment.proof.expectedAmount,
+                                timestamp: payment.proof.timestamp,
+                                verified: payment.proof.verified
+                            };
+                        } else {
+                            // Already public proof, use as-is
+                            publicProof = payment.proof;
+                        }
+                    }
+                    // Update the proof in values array
+                    values[11] = JSON.stringify(publicProof);
+                    
                     console.log(`[Payment Storage] Values to update:`, values);
+                    console.log(`[Payment Storage] ZK Proof (public):`, JSON.stringify(publicProof));
                     
                     // Force update with explicit column mapping to ensure correct data placement
                     // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
