@@ -71,8 +71,8 @@ class SolanaPaymentOracle {
     }
 
     /**
-     * Generate real ZK proof for payment verification
-     * Uses elliptic curve cryptography and Pedersen commitments
+     * Generate advanced ZK proof for payment verification
+     * Uses cutting-edge ZK features: nullifiers, merkle trees, range proofs
      */
     async generateZKProof(transactionHash, expectedAmount, actualAmount = null) {
         try {
@@ -81,13 +81,20 @@ class SolanaPaymentOracle {
                 // Use actual amount if provided, otherwise use expected
                 const amount = actualAmount !== null ? actualAmount : expectedAmount;
                 
+                // Generate advanced ZK proof with all features
                 const proof = await this.zkService.generateZKProof(
                     transactionHash,
                     amount,
-                    expectedAmount
+                    expectedAmount,
+                    {
+                        enableNullifier: true,
+                        enableMerkleTree: true,
+                        enableRangeProof: true
+                    }
                 );
                 
                 this.zkProofs.set(proof.id, proof);
+                console.log(`[ZK] Advanced proof generated: ${proof.id} (features: ${Object.keys(proof.features || {}).join(', ')})`);
                 return proof;
             } else {
                 // Fallback if ZK service not available
@@ -96,6 +103,10 @@ class SolanaPaymentOracle {
             }
         } catch (error) {
             console.error('[ERR] ZK proof generation failed:', error);
+            // If double-spend detected, throw specific error
+            if (error.message.includes('Double-spend')) {
+                throw new Error('Double-spend detected: This transaction has already been used');
+            }
             throw error;
         }
     }

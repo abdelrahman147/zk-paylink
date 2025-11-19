@@ -293,15 +293,24 @@
                         <strong>Confirmations:</strong> ${result.confirmations || 0}
                     </div>
                     <div style="font-size: 0.85rem; color: #00cc00; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #003300;">
-                        <strong>ZK Proof (Public):</strong>
+                        <strong>Advanced ZK Proof (Public):</strong>
                         <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #009900;">
                             <div><strong>Commitment:</strong> ${publicProof.commitment ? publicProof.commitment.substring(0, 32) + '...' : 'N/A'}</div>
-                            <div style="margin-top: 0.25rem;"><strong>Challenge:</strong> ${publicProof.challenge ? publicProof.challenge.substring(0, 32) + '...' : 'N/A'}</div>
-                            <div style="margin-top: 0.25rem;"><strong>Response:</strong> ${publicProof.response ? publicProof.response.substring(0, 32) + '...' : 'N/A'}</div>
+                            <div style="margin-top: 0.25rem;"><strong>Nullifier:</strong> ${publicProof.nullifier ? publicProof.nullifier.substring(0, 32) + '...' : 'N/A'} ${publicProof.features?.doubleSpendProtected ? '[DOUBLE-SPEND PROTECTED]' : ''}</div>
+                            <div style="margin-top: 0.25rem;"><strong>Merkle Root:</strong> ${publicProof.merkleRoot ? publicProof.merkleRoot.substring(0, 32) + '...' : 'N/A'} ${publicProof.features?.hasMerkleProof ? '[MERKLE PROOF]' : ''}</div>
+                            <div style="margin-top: 0.25rem;"><strong>Range Proof:</strong> ${publicProof.rangeProof?.rangeCommitment ? publicProof.rangeProof.rangeCommitment.substring(0, 32) + '...' : 'N/A'} ${publicProof.features?.hasRangeProof ? '[RANGE VERIFIED]' : ''}</div>
                             <div style="margin-top: 0.25rem;"><strong>Signature:</strong> ${publicProof.signature ? publicProof.signature.substring(0, 32) + '...' : 'N/A'}</div>
                         </div>
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #001100; border: 1px solid #003300; font-size: 0.7rem; color: #00ff00;">
+                            <strong>Advanced Features:</strong>
+                            <div style="margin-top: 0.25rem;">
+                                ${publicProof.features?.doubleSpendProtected ? '✓ Double-Spend Protection (Nullifiers)' : ''}
+                                ${publicProof.features?.hasMerkleProof ? '✓ Merkle Tree Integration' : ''}
+                                ${publicProof.features?.hasRangeProof ? '✓ Range Proof Verification' : ''}
+                            </div>
+                        </div>
                         <div style="margin-top: 0.5rem; font-size: 0.7rem; color: #006600; font-style: italic;">
-                            Note: This is a real ZK proof using ECDSA signatures and Pedersen commitments. The witness (transaction hash and actual amount) is hidden.
+                            Note: Advanced ZK proof with nullifiers, merkle trees, and range proofs. Transaction hash and actual amount are completely hidden.
                         </div>
                     </div>
                 </div>
