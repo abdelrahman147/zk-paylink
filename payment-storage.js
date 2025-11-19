@@ -9,9 +9,12 @@ class PaymentStorage {
             origin = 'https://zecit.online';
         }
         this.apiBase = origin + '/api/sheets';
-        // Load payment sheet ID from localStorage, or null to create new one
+        // Use default sheet ID (same as leaderboard) - payments are in separate tab
+        // This ensures all browsers use the same sheet
+        const defaultSheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
+        // Load payment sheet ID from localStorage, or use default
         // Payments should be in a SEPARATE sheet from leaderboard
-        this.sheetId = localStorage.getItem('payment_sheet_id') || null;
+        this.sheetId = localStorage.getItem('payment_sheet_id') || defaultSheetId;
         this.paymentSheetName = 'payment'; // Sheet name for payments (must match tab name)
         
         console.log('✅ Payment Storage initialized');
