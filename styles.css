@@ -350,11 +350,11 @@ html {
     top: 30px;
     left: 0;
     right: 0;
-    background: rgba(10, 14, 39, 0.8);
-    backdrop-filter: blur(10px);
+    background: #000000;
     border-bottom: 1px solid var(--border-color);
     z-index: 999;
     padding: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0, 255, 0, 0.1);
 }
 
 .nav-container {

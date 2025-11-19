@@ -195,11 +195,11 @@
         window.addEventListener('scroll', function() {
             const currentScroll = window.pageYOffset;
             if (currentScroll > 100) {
-                nav.style.background = 'rgba(10, 14, 39, 0.95)';
-                nav.style.backdropFilter = 'blur(10px)';
+                nav.style.background = '#000000';
+                nav.style.boxShadow = '0 2px 8px rgba(0, 255, 0, 0.2)';
             } else {
                 nav.style.background = '';
-                nav.style.backdropFilter = '';
+                nav.style.boxShadow = '';
             }
             lastScroll = currentScroll;
         });
