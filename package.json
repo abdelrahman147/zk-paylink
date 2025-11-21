@@ -1,5 +1,5 @@
 {
-  "name": "zcash-solana-bridge",
+  "name": "zk-paylink",
   "version": "1.0.0",
   "description": "ZCash to Solana Bridge with Oracle Staking",
   "main": "server.js",
