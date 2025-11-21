@@ -64,7 +64,7 @@ exports.handler = async (event, context) => {
                         const timestamp = linkParts[1];
                         // Try to find payment by loading from Google Sheets
                         try {
-                            const baseUrl = process.env.URL || 'https://zecit.online';
+                            const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
                             const sheetsUrl = `${baseUrl}/api/sheets/payments?sheetId=${process.env.GOOGLE_SHEET_ID || '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8'}&sheetName=payment`;
                             const sheetsResponse = await fetch(sheetsUrl);
                             
@@ -100,7 +100,7 @@ exports.handler = async (event, context) => {
                 // If we found a payment ID, reconstruct the link
                 if (paymentId) {
                     try {
-                        const baseUrl = process.env.URL || 'https://zecit.online';
+                        const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
                         const paymentResponse = await fetch(`${baseUrl}/api/oracle/payments/${paymentId}`);
                         if (paymentResponse.ok) {
                             const paymentData = await paymentResponse.json();

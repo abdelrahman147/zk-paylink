@@ -1,7 +1,8 @@
 const fetch = require('node-fetch');
 const { loadPaymentFromSheets } = require('./oracle-payments');
 
-const SITE_URL = (process.env.URL || 'https://zecit.online').replace(/\/$/, '');
+// Use the custom domain as primary
+const SITE_URL = (process.env.URL || 'https://zk-paylink.xyz').replace(/\/$/, '');
 const MERCHANT_ADDRESS = process.env.MERCHANT_ADDRESS || null;
 const PAYMENT_PAGE_URL = process.env.PAYMENT_PAGE_URL || `${SITE_URL}/pay`;
 
@@ -165,10 +166,10 @@ async function fetchTokenPrice(cryptoKey, currency) {
     const coinId = cryptoKey.toLowerCase();
     const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=${encodeURIComponent(fiatLower)}`;
     
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
         try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 5000);
+            const timeout = setTimeout(() => controller.abort(), 2500);
             const response = await fetch(url, { signal: controller.signal, headers: { 'accept': 'application/json' } });
             clearTimeout(timeout);
             if (response.ok) {
@@ -179,11 +180,9 @@ async function fetchTokenPrice(cryptoKey, currency) {
                 }
             }
         } catch (error) {
-            if (attempt === 3) {
-                console.warn(`Token price fetch failed for ${coinId}:`, error.message || error);
-            }
+            console.warn(`Token price fetch attempt ${attempt} failed for ${coinId}:`, error.message || error);
         }
-        await new Promise(resolve => setTimeout(resolve, attempt * 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     // Fallbacks for stablecoins to avoid blocking API
@@ -207,16 +206,30 @@ function roundTokenAmount(value, decimals = 6) {
 }
 
 async function persistPayment(payment) {
-    const saveUrl = `${SITE_URL}/api/oracle/payments`;
+    // Save directly to Google Sheets via sheets-proxy
+    const sheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
+    const sheetName = 'payment';
+    
+    // Use the actual production URL - zk-paylink.xyz
+    const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
+    const saveUrl = `${baseUrl}/api/sheets/payment`;
+    
+    console.log('[API Payments] Saving payment to:', saveUrl);
+    console.log('[API Payments] Payment ID:', payment.id, 'Order ID:', payment.orderId);
+    
     const response = await fetch(saveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payment)
+        body: JSON.stringify({
+            payment: payment,
+            sheetId: sheetId,
+            sheetName: sheetName
+        })
     });
     
     if (!response.ok) {
         const text = await response.text().catch(() => '');
-        console.error('Failed to save payment via oracle endpoint:', response.status, text);
+        console.error('Failed to save payment to Google Sheets:', response.status, text);
         throw new Error('Failed to persist payment');
     }
 }

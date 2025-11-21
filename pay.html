@@ -299,38 +299,46 @@
                     // If we found a payment, create a link on-the-fly
                     if (paymentId) {
                         try {
-                            const paymentResponse = await fetch(`/api/oracle/payments/${paymentId}`);
+                            const paymentResponse = await fetch(`/api/payments/${paymentId}`);
                             if (paymentResponse.ok) {
                                 const paymentData = await paymentResponse.json();
-                                const payment = paymentData.payment;
+                                // API returns payment directly, not wrapped in .payment
+                                const payment = paymentData.paymentId ? paymentData : paymentData.payment;
                                 
                                 if (payment) {
                                     // Generate QR code URL based on token type
-                                    let qrUrl = `solana:${payment.merchantAddress}?amount=${payment.solAmount}`;
-                                    if (payment.token && payment.token !== 'SOL') {
+                                    const merchantAddr = payment.merchantAddress || paymentData.merchantAddress;
+                                    const solAmt = payment.solAmount || payment.tokenAmount || paymentData.solAmount || paymentData.tokenAmount;
+                                    const payToken = payment.token || paymentData.token || 'SOL';
+                                    const payId = payment.paymentId || payment.id || paymentData.paymentId || paymentData.id;
+                                    
+                                    let qrUrl = `solana:${merchantAddr}?amount=${solAmt}`;
+                                    if (payToken && payToken !== 'SOL') {
                                         const tokenMints = {
                                             'USDC': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
                                             'USDT': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
                                             'EURC': 'HzwqbKZw8HxNE6WvK5kfvm6hrKjXUYkLRPvXjrao1HGk'
                                         };
-                                        const tokenMint = tokenMints[payment.token];
+                                        const tokenMint = tokenMints[payToken];
                                         if (tokenMint) {
                                             qrUrl += `&spl-token=${tokenMint}`;
                                         }
                                     }
-                                    qrUrl += `&reference=${payment.id}`;
+                                    qrUrl += `&reference=${payId}`;
+                                    
+                                    console.log('Generated QR URL:', qrUrl);
                                     
                                     // Create a temporary link object
                                     link = {
                                         id: linkId,
-                                        paymentId: payment.id,
+                                        paymentId: payId,
                                         url: `${window.location.origin}/pay/${linkId}`,
                                         qrCode: {
                                             url: qrUrl,
                                             data: qrUrl
                                         },
                                         status: 'active',
-                                        createdAt: payment.createdAt
+                                        createdAt: payment.createdAt || paymentData.createdAt
                                     };
                                     
                                     displayPaymentPage(link, payment);
@@ -350,10 +358,11 @@
                 let payment = null;
                 if (link.paymentId) {
                     try {
-                        const paymentResponse = await fetch(`/api/oracle/payments/${link.paymentId}`);
+                        const paymentResponse = await fetch(`/api/payments/${link.paymentId}`);
                         if (paymentResponse.ok) {
                             const paymentData = await paymentResponse.json();
-                            payment = paymentData.payment;
+                            // API returns payment directly, not wrapped in .payment
+                            payment = paymentData.paymentId ? paymentData : paymentData.payment;
                         }
                     } catch (err) {
                         console.warn('Could not fetch payment details:', err);
@@ -386,11 +395,31 @@
                 return;
             }
             
-            const solAmount = payment.solAmount || payment.amount || 0;
-            const token = payment.token || 'SOL';
+            // Handle both API formats: direct payment object or wrapped in .payment
+            const paymentData = payment.paymentId ? payment : (payment.payment || payment);
+            
+            // Ensure we have a payment ID - critical for verification
+            if (!paymentData.paymentId && !paymentData.id) {
+                console.error('❌ CRITICAL: Payment data has no ID!', paymentData);
+                // Try to get from link if available
+                if (link && link.paymentId) {
+                    paymentData.paymentId = link.paymentId;
+                    console.log('✅ Recovered payment ID from link:', link.paymentId);
+                }
+            }
+            
+            console.log('💳 Payment Data for display:', {
+                paymentId: paymentData.paymentId,
+                id: paymentData.id,
+                orderId: paymentData.orderId,
+                status: paymentData.status
+            });
+            
+            const solAmount = paymentData.solAmount || paymentData.tokenAmount || paymentData.amount || 0;
+            const token = paymentData.token || 'SOL';
             
             // Check payment status
-            const isVerified = payment.status === 'verified';
+            const isVerified = paymentData.status === 'verified';
             const statusColor = isVerified ? '#10b981' : '#f59e0b'; // Green for verified, amber for pending
             const statusText = isVerified ? 'Verified' : 'Pending';
             const statusIcon = isVerified ? '✓' : '⏳';
@@ -418,17 +447,17 @@
                             <span style="color: #10b981; font-size: 1.1rem;">✓</span>
                             <span style="color: #10b981; font-weight: 600;">Payment Verified</span>
                         </div>
-                        ${payment.transactionSignature ? `
+                        ${paymentData.transactionSignature ? `
                         <div style="margin-top: 0.5rem;">
                             <span style="color: var(--text-secondary); font-size: 0.9rem;">Transaction: </span>
-                            <a href="https://solscan.io/tx/${payment.transactionSignature}" target="_blank" style="color: var(--accent-primary); font-family: var(--font-mono); font-size: 0.9rem; text-decoration: none;">
-                                ${payment.transactionSignature.substring(0, 20)}...
+                            <a href="https://solscan.io/tx/${paymentData.transactionSignature}" target="_blank" style="color: var(--accent-primary); font-family: var(--font-mono); font-size: 0.9rem; text-decoration: none;">
+                                ${paymentData.transactionSignature.substring(0, 20)}...
                             </a>
                         </div>
                         ` : ''}
-                        ${payment.confirmedAt ? `
+                        ${paymentData.confirmedAt ? `
                         <div style="margin-top: 0.5rem;">
-                            <span style="color: var(--text-secondary); font-size: 0.9rem;">Confirmed: ${new Date(payment.confirmedAt).toLocaleString()}</span>
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">Confirmed: ${new Date(paymentData.confirmedAt).toLocaleString()}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -437,16 +466,16 @@
                     <div style="margin-bottom: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span style="color: var(--text-secondary);">Amount:</span>
-                            <span style="font-weight: 600;">$${payment.amount.toFixed(2)}</span>
+                            <span style="font-weight: 600;">$${paymentData.amount.toFixed(2)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span style="color: var(--text-secondary);">Token Amount:</span>
                             <span style="font-weight: 600; color: var(--accent-primary);">${solAmount.toFixed(8)} ${token}</span>
                         </div>
-                        ${payment.orderId ? `
+                        ${paymentData.orderId ? `
                         <div style="display: flex; justify-content: space-between;">
                             <span style="color: var(--text-secondary);">Order ID:</span>
-                            <span style="font-family: var(--font-mono); font-size: 0.9rem;">${payment.orderId}</span>
+                            <span style="font-family: var(--font-mono); font-size: 0.9rem;">${paymentData.orderId}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -481,10 +510,24 @@
             `;
             
             // Generate QR code
-            if (window.QRCode && link.qrCode) {
-                const qrContainer = document.getElementById('qr-code-container');
-                const qrText = link.qrCode.url || link.qrCode.data || link.url;
-                if (qrText) {
+            const qrContainer = document.getElementById('qr-code-container');
+            if (!qrContainer) {
+                console.error('QR code container not found');
+                return;
+            }
+            
+            const qrText = link.qrCode?.url || link.qrCode?.data || link.url;
+            if (!qrText) {
+                console.error('No QR code data available');
+                qrContainer.innerHTML = '<p style="color: var(--text-secondary);">QR code unavailable</p>';
+                return;
+            }
+            
+            console.log('Generating QR code for:', qrText);
+            
+            // Try canvas-based QR code first
+            if (window.QRCode) {
+                try {
                     window.QRCode.toCanvas(qrContainer, qrText, {
                         width: 256,
                         margin: 2,
@@ -494,17 +537,22 @@
                         }
                     }, function (error) {
                         if (error) {
-                            console.error('QR code generation error:', error);
-                            // Fallback: create img element
-                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrText)}" alt="QR Code" style="max-width: 100%; height: auto;">`;
+                            console.error('QR code canvas generation error:', error);
+                            // Fallback to external service
+                            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrText)}" alt="QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+                        } else {
+                            console.log('QR code generated successfully via canvas');
                         }
                     });
+                } catch (err) {
+                    console.error('QR code generation exception:', err);
+                    // Fallback to external service
+                    qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrText)}" alt="QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
                 }
-            } else if (link.qrCode) {
-                // Fallback: use external QR code service
-                const qrContainer = document.getElementById('qr-code-container');
-                const qrText = link.qrCode.url || link.qrCode.data || link.url;
-                qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrText)}" alt="QR Code" style="max-width: 100%; height: auto;">`;
+            } else {
+                // QRCode library not loaded, use external service
+                console.warn('QRCode library not loaded, using external service');
+                qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrText)}" alt="QR Code" style="max-width: 100%; height: auto; border-radius: 8px;">`;
             }
             
             // Pay with wallet button
@@ -606,7 +654,7 @@
                             
                             // For SPL tokens, use Solana Pay deep link
                             // The wallet will handle the token transfer properly
-                            const solanaPayUrl = `solana:${payment.merchantAddress}?amount=${solAmount}&spl-token=${tokenMint}&reference=${payment.id}`;
+                            const solanaPayUrl = `solana:${paymentData.merchantAddress}?amount=${solAmount}&spl-token=${tokenMint}&reference=${paymentData.id}`;
                             
                             // Try to use wallet's built-in Solana Pay handler
                             if (window.solana && window.solana.signTransaction) {
@@ -784,7 +832,14 @@
                         
                         // Notify backend about the payment with REAL blockchain data
                         try {
-                            const verifyResponse = await fetch(`/api/oracle/payments/${payment.id}/verify`, {
+                            // Use paymentId or id, whichever is available
+                            const actualPaymentId = paymentData.paymentId || paymentData.id;
+                            console.log('🔍 Verifying payment with backend:');
+                            console.log('   Payment ID:', actualPaymentId);
+                            console.log('   Payment Data:', paymentData);
+                            console.log('   Signature:', signature);
+                            
+                            const verifyResponse = await fetch(`/api/oracle/payments/${actualPaymentId}/verify`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 
@@ -797,7 +852,52 @@
                             });
                             
                             if (!verifyResponse.ok) {
-                                console.warn('Backend verification failed:', await verifyResponse.text());
+                                const errorText = await verifyResponse.text();
+                                console.error('❌ Backend verification failed:', errorText);
+                                console.error('   Status:', verifyResponse.status);
+                                console.error('   Payment ID used:', actualPaymentId);
+                                
+                                // If 404, try alternative approaches
+                                if (verifyResponse.status === 404 && paymentData.orderId) {
+                                    console.log('🔄 Retrying verification with Order ID:', paymentData.orderId);
+                                    
+                                    // Try to find payment by orderId and update it
+                                    try {
+                                        const allPaymentsResponse = await fetch('/api/oracle/payments');
+                                        if (allPaymentsResponse.ok) {
+                                            const allPaymentsData = await allPaymentsResponse.json();
+                                            const matchingPayment = allPaymentsData.payments?.find(p => 
+                                                p.orderId === paymentData.orderId
+                                            );
+                                            
+                                            if (matchingPayment) {
+                                                console.log('✅ Found payment by Order ID:', matchingPayment.id);
+                                                // Retry verification with correct payment ID
+                                                const retryResponse = await fetch(`/api/oracle/payments/${matchingPayment.id}/verify`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ 
+                                                        signature: signature,
+                                                        status: txVerified ? 'verified' : 'pending',
+                                                        confirmedAt: txVerified && verifiedTx?.blockTime ? verifiedTx.blockTime * 1000 : Date.now(),
+                                                        blockTime: verifiedTx?.blockTime,
+                                                        slot: verifiedTx?.slot
+                                                    })
+                                                });
+                                                
+                                                if (retryResponse.ok) {
+                                                    console.log('✅ Retry successful with correct payment ID');
+                                                } else {
+                                                    console.error('❌ Retry also failed:', await retryResponse.text());
+                                                }
+                                            } else {
+                                                console.error('❌ Could not find payment with Order ID:', paymentData.orderId);
+                                            }
+                                        }
+                                    } catch (retryErr) {
+                                        console.error('❌ Retry error:', retryErr);
+                                    }
+                                }
                             } else {
                                 const verifyData = await verifyResponse.json();
                                 console.log('✅ Payment verified on blockchain and backend updated');
@@ -1071,4 +1171,5 @@
     </script>
 </body>
 </html>
+
 

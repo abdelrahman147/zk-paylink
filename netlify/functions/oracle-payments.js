@@ -10,8 +10,10 @@ async function loadPaymentFromSheets(paymentId, orderId = null) {
         const sheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
         const sheetName = 'payment';
         
-        // Call sheets-proxy to load payments
-        const sheetsUrl = `https://zecit.online/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
+        // Use the actual production URL
+        const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
+        const sheetsUrl = `${baseUrl}/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
+        console.log('[Oracle Payments] Loading payments from:', sheetsUrl);
         const response = await fetch(sheetsUrl);
         
         if (!response.ok) {
@@ -100,7 +102,7 @@ exports.handler = async (event, context) => {
             const payment = JSON.parse(event.body);
             
             // Save to Google Sheets immediately (single source of truth)
-            const baseUrl = process.env.URL || 'https://zecit.online';
+            const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
             const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
             try {
                 const saveResponse = await fetch(sheetsProxyUrl, {
@@ -213,7 +215,7 @@ exports.handler = async (event, context) => {
                                 // SIMPLIFIED: No in-memory cache - Google Sheets is source of truth
                                 
                                 // Also update Google Sheets in background (don't wait)
-                                const baseUrl = process.env.URL || 'https://zecit.online';
+                                const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
                                 const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
                                 fetch(sheetsProxyUrl, {
                                     method: 'POST',
@@ -254,7 +256,8 @@ exports.handler = async (event, context) => {
                 try {
                     const sheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
                     const sheetName = 'payment';
-                    const sheetsUrl = `https://zecit.online/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
+                    const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
+                    const sheetsUrl = `${baseUrl}/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
                     const response = await fetch(sheetsUrl);
                     if (response.ok) {
                         const data = await response.json();
@@ -269,7 +272,8 @@ exports.handler = async (event, context) => {
                     try {
                         const sheetId = '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
                         const sheetName = 'payment';
-                        const sheetsUrl = `https://zecit.online/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
+                        const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
+                        const sheetsUrl = `${baseUrl}/api/sheets/payments?sheetId=${sheetId}&sheetName=${sheetName}`;
                         const sheetsResponse = await fetch(sheetsUrl);
                         
                         if (sheetsResponse.ok) {
@@ -305,7 +309,7 @@ exports.handler = async (event, context) => {
             if (!payment) {
                 // Try loading from Google Sheets with different method
                 try {
-                    const baseUrl = process.env.URL || 'https://zecit.online';
+                    const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
                     const sheetsProxyUrl = `${baseUrl}/api/sheets/payments`;
                     const sheetId = process.env.GOOGLE_SHEET_ID || '1apjUM4vb-6TUx4cweIThML5TIKBg8E7HjLlaZyiw1e8';
                     
@@ -413,7 +417,7 @@ exports.handler = async (event, context) => {
             // Also save to Google Sheets immediately - FORCE UPDATE
             try {
                 // Construct the sheets-proxy URL correctly for Netlify
-                const baseUrl = process.env.URL || 'https://zecit.online';
+                const baseUrl = process.env.URL || 'https://zk-paylink.xyz';
                 const sheetsProxyUrl = `${baseUrl}/api/sheets/payment`;
                 
                 console.log(`[Oracle Payments] 💾 Saving payment ${paymentId} to Google Sheets`);
