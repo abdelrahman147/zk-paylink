@@ -78,6 +78,8 @@ async function loadPaymentFromSheets(paymentId, orderId = null) {
     }
 }
 
+exports.loadPaymentFromSheets = loadPaymentFromSheets;
+
 exports.handler = async (event, context) => {
     // Handle OPTIONS preflight
     if (event.httpMethod === 'OPTIONS') {

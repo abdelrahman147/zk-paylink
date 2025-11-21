@@ -66,6 +66,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/payments"
+  to = "/.netlify/functions/api-payments"
+  status = 200
+
+[[redirects]]
+  from = "/api/payments/*"
+  to = "/.netlify/functions/api-payments/:splat"
+  status = 200
+
+[[redirects]]
   from = "/pay/*"
   to = "/pay.html"
   status = 200
