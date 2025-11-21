@@ -77,6 +77,10 @@ async function handleCreatePayment(event) {
         return jsonResponse(400, { error: 'merchantAddress required. Pass it in the request body or configure MERCHANT_ADDRESS.' });
     }
     
+    console.log('[API Payments] Creating payment with merchant address:', merchantAddress);
+    console.log('[API Payments] Request merchant address:', payload.merchantAddress);
+    console.log('[API Payments] Env merchant address:', MERCHANT_ADDRESS);
+    
     const allowPartial = Boolean(payload.allowPartial);
     const metadata = typeof payload.metadata === 'object' && payload.metadata !== null ? payload.metadata : {};
     
