@@ -6,6 +6,13 @@ const MERCHANT_ADDRESS = process.env.MERCHANT_ADDRESS || null;
 const PAYMENT_PAGE_URL = process.env.PAYMENT_PAGE_URL || `${SITE_URL}/pay`;
 const PRICE_ENDPOINT = process.env.CRYPTO_PRICE_URL || `${SITE_URL}/api/crypto-price`;
 
+const SUPPORTED_TOKENS = {
+    SOL: { priceKey: 'solana', decimals: 9 },
+    USDC: { priceKey: 'usd-coin', decimals: 6 },
+    USDT: { priceKey: 'tether', decimals: 6 },
+    EURC: { priceKey: 'euro-coin', decimals: 6 }
+};
+
 const baseHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -64,9 +71,10 @@ async function handleCreatePayment(event) {
     
     const currency = String(payload.currency || 'USD').toUpperCase();
     const token = String(payload.token || 'SOL').toUpperCase();
+    const tokenInfo = SUPPORTED_TOKENS[token];
     
-    if (token !== 'SOL') {
-        return jsonResponse(400, { error: 'Only SOL payments are supported via the API currently' });
+    if (!tokenInfo) {
+        return jsonResponse(400, { error: `Unsupported token "${token}". Supported tokens: ${Object.keys(SUPPORTED_TOKENS).join(', ')}` });
     }
     
     const allowPartial = Boolean(payload.allowPartial);
@@ -77,8 +85,8 @@ async function handleCreatePayment(event) {
         orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     }
     
-    const solPrice = await fetchSolPrice(currency);
-    const solAmount = amount / solPrice;
+    const tokenPrice = await fetchTokenPrice(tokenInfo.priceKey, currency);
+    const tokenAmount = roundTokenAmount(amount / tokenPrice, tokenInfo.decimals);
     
     const now = Date.now();
     const payment = {
@@ -86,7 +94,7 @@ async function handleCreatePayment(event) {
         amount,
         currency,
         token,
-        solAmount,
+        solAmount: tokenAmount,
         orderId,
         merchantAddress: MERCHANT_ADDRESS,
         status: 'pending',
@@ -110,7 +118,8 @@ async function handleCreatePayment(event) {
             amount: payment.amount,
             currency: payment.currency,
             token: payment.token,
-            solAmount: Number(payment.solAmount.toFixed(8)),
+            solAmount: payment.solAmount,
+            tokenAmount: payment.solAmount,
             orderId: payment.orderId,
             status: payment.status,
             createdAt: payment.createdAt,
@@ -141,6 +150,7 @@ async function handleGetPayment(paymentId) {
         currency: payment.currency,
         token: payment.token,
         solAmount: payment.solAmount,
+        tokenAmount: payment.solAmount,
         merchantAddress: payment.merchantAddress,
         orderId: payment.orderId,
         createdAt: payment.createdAt,
@@ -151,17 +161,22 @@ async function handleGetPayment(paymentId) {
     });
 }
 
-async function fetchSolPrice(currency) {
-    const url = `${PRICE_ENDPOINT}?crypto=solana&fiat=${encodeURIComponent(currency)}`;
+async function fetchTokenPrice(cryptoKey, currency) {
+    const url = `${PRICE_ENDPOINT}?crypto=${encodeURIComponent(cryptoKey)}&fiat=${encodeURIComponent(currency)}`;
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error('Failed to fetch SOL price');
+        throw new Error('Failed to fetch token price');
     }
     const data = await response.json();
     if (!data.price || data.price <= 0) {
         throw new Error('Invalid price response');
     }
     return data.price;
+}
+
+function roundTokenAmount(value, decimals = 6) {
+    const multiplier = Math.pow(10, decimals);
+    return Math.round(value * multiplier) / multiplier;
 }
 
 async function persistPayment(payment) {
