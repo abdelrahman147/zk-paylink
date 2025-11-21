@@ -366,14 +366,14 @@ class SolanaPaymentOracle {
                     });
                 }, 2000);
                 
-        // Clean up expired payments and duplicates immediately after loading
-        // This ensures expired payments and duplicates are removed as soon as they're loaded
-        setTimeout(async () => {
-            console.log('[CLEAN] Running automatic cleanup after loading payments...');
-            await this.cleanupExpiredPayments();
-            // Also clean up duplicates
-            await this.cleanupDuplicatePayments();
-        }, 1000); // Wait 1 second after loading to clean up
+                // Clean up expired payments and duplicates immediately after loading
+                // This ensures expired payments and duplicates are removed as soon as they're loaded
+                setTimeout(async () => {
+                    console.log('[CLEAN] Running automatic cleanup after loading payments...');
+                    await this.cleanupExpiredPayments();
+                    // Also clean up duplicates
+                    await this.cleanupDuplicatePayments();
+                }, 1000); // Wait 1 second after loading to clean up
                 
             } catch (error) {
                 console.error('Failed to load payments from storage:', error);
