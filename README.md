@@ -32,14 +32,12 @@ A payment gateway API that lets you accept cryptocurrency payments while protect
 
 ### Base URL
 ```
-https://zk-paylink.xyz/api
+https://zk-paylink.xyz
 ```
-
-**Note**: Replace `zk-paylink.xyz` with your actual domain when self-hosting.
 
 ### Create Payment
 
-**Endpoint**: `POST /payments`
+**Endpoint**: `POST /api/payments`
 
 **Request**:
 ```bash
@@ -75,7 +73,7 @@ curl -X POST https://zk-paylink.xyz/api/payments \
 
 ### Check Payment Status
 
-**Endpoint**: `GET /payments/{paymentId}`
+**Endpoint**: `GET /api/payments/{paymentId}`
 
 **Request**:
 ```bash
