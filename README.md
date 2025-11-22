@@ -1,94 +1,54 @@
-# ZK-PayLink
+# ZK-PayLink API
 
 **Privacy-Preserving Payment Gateway on Solana**
 
 Accept payments in SOL, USDC, USDT, and EURC with zero-knowledge proof privacy.
 
-🔗 **Live Demo**: [zk-paylink.xyz](https://zk-paylink.xyz)
+🔗 **Live API**: [zk-paylink.xyz/api](https://zk-paylink.xyz/api)
 
 ---
 
 ## What is ZK-PayLink?
 
-ZK-PayLink is a payment gateway that lets you accept cryptocurrency payments while protecting transaction privacy using zero-knowledge proofs.
+A payment gateway API that lets you accept cryptocurrency payments while protecting transaction privacy using zero-knowledge proofs.
 
 ### Key Features
 
 🔐 **Zero-Knowledge Privacy**
 - Payment amounts hidden in cryptographic commitments
 - Verify payments without revealing transaction details
-- Real SHA-256 cryptographic proofs
 
 💰 **Multi-Token Support**
-- SOL (Solana)
-- USDC (USD Coin)
-- USDT (Tether)
-- EURC (Euro Coin)
+- SOL, USDC, USDT, EURC on Solana
 
-⚡ **Fast & Simple**
-- Instant payment verification
-- QR code payments
-- RESTful API
-- No complex setup
+⚡ **Simple REST API**
+- Create payment requests
+- Check payment status
+- Webhook notifications
 
 ---
 
-## How It Works
+## API Documentation
 
-### For Customers
-
-1. **Scan QR Code** or click "Pay with Wallet"
-2. **Approve transaction** in your Solana wallet
-3. **Payment verified** instantly on blockchain
-4. **Privacy protected** with zero-knowledge proof
-
-### For Merchants
-
-1. **Create payment request** via API
-2. **Share payment link** with customer
-3. **Receive confirmation** when paid
-4. **Verify payment** without seeing blockchain details
-
----
-
-## Zero-Knowledge Technology
-
-### What is Zero-Knowledge?
-
-Zero-knowledge proofs allow you to prove something is true without revealing the underlying information.
-
-**Example**: Prove you paid $100 without showing the transaction to everyone.
-
-### How We Use It
-
-When a payment is completed:
-1. System generates a cryptographic commitment: `Hash(paymentID + amount + token + secret)`
-2. Only the hash is stored publicly
-3. Merchant can verify payment using the commitment
-4. Transaction details remain private
-
-**Privacy Benefits**:
-- ✅ Payment amounts hidden
-- ✅ Token types protected
-- ✅ Selective disclosure (share only with who needs to know)
-- ✅ Verifiable without blockchain explorer
-
----
-
-## API Usage
+### Base URL
+```
+https://zk-paylink.xyz/api
+```
 
 ### Create Payment
 
-```bash
-POST https://zk-paylink.xyz/api/payments
-Content-Type: application/json
+**Endpoint**: `POST /payments`
 
-{
-  "amount": 100,
-  "currency": "USD",
-  "token": "USDT",
-  "merchantAddress": "YOUR_SOLANA_ADDRESS"
-}
+**Request**:
+```bash
+curl -X POST https://zk-paylink.xyz/api/payments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100,
+    "currency": "USD",
+    "token": "USDT",
+    "merchantAddress": "YOUR_SOLANA_ADDRESS"
+  }'
 ```
 
 **Response**:
@@ -96,132 +56,227 @@ Content-Type: application/json
 {
   "success": true,
   "payment": {
-    "id": "pay_123...",
+    "id": "pay_1234567890_abc123",
     "amount": 100,
+    "currency": "USD",
     "token": "USDT",
     "tokenAmount": 100.5,
+    "orderId": "ORDER-1234567890-ABC123",
     "status": "pending",
-    "paymentUrl": "https://zk-paylink.xyz/pay/pay_123...",
-    "merchantAddress": "YOUR_SOLANA_ADDRESS"
+    "createdAt": 1700000000000,
+    "expiresAt": 1700000900000,
+    "merchantAddress": "YOUR_SOLANA_ADDRESS",
+    "paymentUrl": "https://zk-paylink.xyz/pay/pay_1234567890_abc123"
   }
 }
 ```
 
 ### Check Payment Status
 
+**Endpoint**: `GET /payments/{paymentId}`
+
+**Request**:
 ```bash
-GET https://zk-paylink.xyz/api/payments/{paymentId}
+curl https://zk-paylink.xyz/api/payments/pay_1234567890_abc123
 ```
 
 **Response**:
 ```json
 {
-  "paymentId": "pay_123...",
+  "paymentId": "pay_1234567890_abc123",
   "status": "verified",
   "amount": 100,
+  "currency": "USD",
   "token": "USDT",
-  "zkCommitment": "7f3d8e9a2b1c...",
+  "tokenAmount": 100.5,
+  "merchantAddress": "YOUR_SOLANA_ADDRESS",
+  "orderId": "ORDER-1234567890-ABC123",
+  "createdAt": 1700000000000,
+  "confirmedAt": 1700000050000,
+  "transactionSignature": "4mQvH...",
+  "zkCommitment": "7f3d8e9a2b1c4f5e...",
   "zkEnabled": true,
-  "confirmedAt": "2025-11-21T15:56:10.000Z"
+  "paymentUrl": "https://zk-paylink.xyz/pay/pay_1234567890_abc123"
 }
+```
+
+### Payment Status Values
+
+- `pending` - Waiting for payment
+- `verified` - Payment confirmed on blockchain
+
+---
+
+## Zero-Knowledge Privacy
+
+### How It Works
+
+When a payment is verified:
+1. System generates cryptographic commitment: `Hash(paymentID + amount + token + secret)`
+2. Only the commitment hash is stored publicly
+3. Payment details remain private
+4. Merchant receives confirmation without exposing transaction to third parties
+
+### Privacy Benefits
+
+- ✅ Payment amounts hidden
+- ✅ Token types protected  
+- ✅ Selective disclosure
+- ✅ Cryptographically secure (SHA-256)
+
+---
+
+## Integration Examples
+
+### Node.js
+
+```javascript
+const axios = require('axios');
+
+// Create payment
+const createPayment = async () => {
+  const response = await axios.post('https://zk-paylink.xyz/api/payments', {
+    amount: 100,
+    currency: 'USD',
+    token: 'USDT',
+    merchantAddress: 'YOUR_SOLANA_ADDRESS'
+  });
+  
+  console.log('Payment URL:', response.data.payment.paymentUrl);
+  return response.data.payment.id;
+};
+
+// Check payment status
+const checkPayment = async (paymentId) => {
+  const response = await axios.get(`https://zk-paylink.xyz/api/payments/${paymentId}`);
+  console.log('Status:', response.data.status);
+  return response.data;
+};
+```
+
+### Python
+
+```python
+import requests
+
+# Create payment
+def create_payment():
+    response = requests.post('https://zk-paylink.xyz/api/payments', json={
+        'amount': 100,
+        'currency': 'USD',
+        'token': 'USDT',
+        'merchantAddress': 'YOUR_SOLANA_ADDRESS'
+    })
+    data = response.json()
+    print(f"Payment URL: {data['payment']['paymentUrl']}")
+    return data['payment']['id']
+
+# Check payment status
+def check_payment(payment_id):
+    response = requests.get(f'https://zk-paylink.xyz/api/payments/{payment_id}')
+    data = response.json()
+    print(f"Status: {data['status']}")
+    return data
+```
+
+### PHP
+
+```php
+<?php
+// Create payment
+function createPayment() {
+    $ch = curl_init('https://zk-paylink.xyz/api/payments');
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'amount' => 100,
+        'currency' => 'USD',
+        'token' => 'USDT',
+        'merchantAddress' => 'YOUR_SOLANA_ADDRESS'
+    ]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $data = json_decode($response, true);
+    echo "Payment URL: " . $data['payment']['paymentUrl'] . "\n";
+    return $data['payment']['id'];
+}
+
+// Check payment status
+function checkPayment($paymentId) {
+    $ch = curl_init("https://zk-paylink.xyz/api/payments/$paymentId");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $data = json_decode($response, true);
+    echo "Status: " . $data['status'] . "\n";
+    return $data;
+}
+?>
 ```
 
 ---
 
-## Use Cases
+## Supported Tokens
 
-### E-Commerce
-Accept crypto payments on your online store with privacy protection.
-
-### Subscription Services
-Recurring payments with transaction privacy.
-
-### Peer-to-Peer
-Private payments between individuals.
-
-### B2B Transactions
-Business payments without exposing amounts to competitors.
+| Token | Name | Decimals |
+|-------|------|----------|
+| SOL | Solana | 9 |
+| USDC | USD Coin | 6 |
+| USDT | Tether | 6 |
+| EURC | Euro Coin | 6 |
 
 ---
 
-## Supported Wallets
+## Error Handling
 
-- Phantom
-- Solflare
-- Backpack
-- Any Solana-compatible wallet
+### Error Response Format
+
+```json
+{
+  "error": "Error message description"
+}
+```
+
+### Common Errors
+
+- `400` - Invalid request (missing required fields)
+- `404` - Payment not found
+- `500` - Server error
+
+---
+
+## Rate Limits
+
+- **100 requests per minute** per IP address
+- Contact us for higher limits
 
 ---
 
 ## Security
 
-- ✅ **Cryptographic commitments** using SHA-256
-- ✅ **Blockchain verification** on Solana mainnet
-- ✅ **No private keys stored** - non-custodial
-- ✅ **Open source** - auditable code
+- ✅ HTTPS only
+- ✅ No API keys required for read operations
+- ✅ Non-custodial (we never hold funds)
+- ✅ Open source and auditable
 
 ---
 
-## Getting Started
+## Support
 
-### For Merchants
-
-1. Visit [zk-paylink.xyz](https://zk-paylink.xyz)
-2. Connect your Solana wallet
-3. Create a payment request
-4. Share the payment link with your customer
-
-### For Developers
-
-Check out our [API Documentation](https://zk-paylink.xyz/api-docs) for integration guides.
-
----
-
-## Demo
-
-Try the interactive zero-knowledge proof demo:
-👉 [zk-paylink.xyz/zk-demo.html](https://zk-paylink.xyz/zk-demo.html)
-
-See how commitments are generated and verified without revealing payment details.
-
----
-
-## FAQ
-
-**Q: Is this really private?**  
-A: Yes. Payment amounts and tokens are hidden in cryptographic commitments. Only those with the secret can verify the details.
-
-**Q: Can I use this for my business?**  
-A: Absolutely! Use our API to integrate ZK-PayLink into your application.
-
-**Q: What fees do you charge?**  
-A: Only standard Solana network fees (typically < $0.01). No platform fees.
-
-**Q: Is my wallet safe?**  
-A: Yes. We never store private keys. All transactions are signed in your wallet.
-
-**Q: Which tokens are supported?**  
-A: SOL, USDC, USDT, and EURC on Solana mainnet.
-
----
-
-## Links
-
-- 🌐 **Website**: [zk-paylink.xyz](https://zk-paylink.xyz)
-- 📚 **API Docs**: [zk-paylink.xyz/api-docs](https://zk-paylink.xyz/api-docs)
-- 🔐 **ZK Demo**: [zk-paylink.xyz/zk-demo.html](https://zk-paylink.xyz/zk-demo.html)
+- 📧 Email: support@zk-paylink.xyz
+- 🐛 Issues: [GitHub Issues](https://github.com/abdelrahman147/zk-paylink/issues)
+- 🌐 Website: [zk-paylink.xyz](https://zk-paylink.xyz)
 
 ---
 
 ## License
 
 MIT License - Free to use for personal and commercial projects.
-
----
-
-## Support
-
-Need help? Open an issue or contact us through the website.
 
 ---
 
