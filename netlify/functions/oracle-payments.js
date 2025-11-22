@@ -407,12 +407,21 @@ exports.handler = async (event, context) => {
             payment.confirmedAt = blockTime ? blockTime * 1000 : (body.confirmedAt || payment.confirmedAt || Date.now());
             payment.blockTime = blockTime;
             payment.slot = slot;
+            
+            // Add ZK commitment if provided
+            if (body.zkCommitment) {
+                payment.zkCommitment = body.zkCommitment;
+                payment.zkEnabled = body.zkEnabled || true;
+                console.log(`[Oracle Payments] 🔐 ZK Commitment received: ${body.zkCommitment.substring(0, 16)}...`);
+            }
+            
             // SIMPLIFIED: No in-memory cache - Google Sheets is source of truth
             
             console.log(`[Oracle Payments] ✅ Payment ${paymentId} ready to save to Google Sheets`);
             console.log(`[Oracle Payments]    Status: ${payment.status} (${blockchainVerified ? 'BLOCKCHAIN VERIFIED' : body.status || 'pending'})`);
             console.log(`[Oracle Payments]    Signature: ${txSignature}`);
             console.log(`[Oracle Payments]    Confirmed: ${new Date(payment.confirmedAt).toISOString()}`);
+            console.log(`[Oracle Payments]    ZK Enabled: ${payment.zkEnabled ? 'Yes' : 'No'}`);
             
             // Also save to Google Sheets immediately - FORCE UPDATE
             try {

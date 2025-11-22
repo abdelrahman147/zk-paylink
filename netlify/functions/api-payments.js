@@ -147,6 +147,10 @@ async function handleGetPayment(paymentId) {
     const paymentUrl = `${PAYMENT_PAGE_URL.replace(/\/$/, '')}/${encodeURIComponent(payment.id)}`;
     const proof = payment.proof && Object.keys(payment.proof || {}).length > 0 ? payment.proof : null;
     
+    // Include ZK commitment if available (privacy-preserving)
+    const zkCommitment = payment.zkCommitment || null;
+    const zkEnabled = payment.zkEnabled || false;
+    
     return jsonResponse(200, {
         paymentId: payment.id,
         status: payment.status,
@@ -161,7 +165,9 @@ async function handleGetPayment(paymentId) {
         confirmedAt: payment.confirmedAt || null,
         transactionSignature: payment.transactionSignature || null,
         paymentUrl,
-        proof
+        proof,
+        zkCommitment,
+        zkEnabled
     });
 }
 

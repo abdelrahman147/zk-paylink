@@ -38,22 +38,38 @@
             });
         }
         
-        // View Docs button
+        // Play Game button - scroll to game section
         const viewDocsBtn = document.getElementById('view-docs-btn');
         if (viewDocsBtn) {
             viewDocsBtn.addEventListener('click', function() {
-                const docs = document.getElementById('docs');
-                if (docs) {
-                    docs.scrollIntoView({ behavior: 'smooth' });
+                const gameSection = document.getElementById('game');
+                if (gameSection) {
+                    gameSection.scrollIntoView({ behavior: 'smooth' });
                 }
             });
         }
         
-        // Try Demo button
+        // Try Payments button - scroll to payment dashboard
         const tryDemoBtn = document.getElementById('try-demo-btn');
         if (tryDemoBtn) {
             tryDemoBtn.addEventListener('click', function() {
-                alert('Demo coming soon! Check out our GitHub repository for live examples.');
+                const merchantSection = document.getElementById('merchant-dashboard');
+                if (merchantSection) {
+                    merchantSection.scrollIntoView({ behavior: 'smooth' });
+                    // Switch to payments tab
+                    const paymentsTab = document.querySelector('[data-tab="payments"]');
+                    if (paymentsTab) {
+                        paymentsTab.click();
+                    }
+                }
+            });
+        }
+        
+        // Buy Token button - redirect to pump.fun
+        const buyTokenBtn = document.getElementById('buy-token-btn');
+        if (buyTokenBtn) {
+            buyTokenBtn.addEventListener('click', function() {
+                window.open('https://pump.fun/', '_blank');
             });
         }
         

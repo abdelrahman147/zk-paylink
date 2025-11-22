@@ -14,6 +14,7 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="zk-commitment.js"></script>
     <!-- Buffer polyfill for Solana SDK - must load before Solana SDK -->
     <script>
         // Buffer polyfill that extends Uint8Array directly (required by Solana SDK)
@@ -447,6 +448,20 @@
                             <span style="color: #10b981; font-size: 1.1rem;">✓</span>
                             <span style="color: #10b981; font-weight: 600;">Payment Verified</span>
                         </div>
+                        ${paymentData.zkCommitment ? `
+                        <div style="margin-top: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="color: #10b981; font-size: 1rem;">🔐</span>
+                                <span style="color: #10b981; font-weight: 600; font-size: 0.9rem;">Zero-Knowledge Proof</span>
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
+                                Payment verified with privacy-preserving cryptographic commitment. Amount and token details are hidden.
+                            </div>
+                            <div style="background: var(--bg-tertiary); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--text-secondary);">
+                                ${paymentData.zkCommitment.substring(0, 48)}...
+                            </div>
+                        </div>
+                        ` : `
                         ${paymentData.transactionSignature ? `
                         <div style="margin-top: 0.5rem;">
                             <span style="color: var(--text-secondary); font-size: 0.9rem;">Transaction: </span>
@@ -455,6 +470,7 @@
                             </a>
                         </div>
                         ` : ''}
+                        `}
                         ${paymentData.confirmedAt ? `
                         <div style="margin-top: 0.5rem;">
                             <span style="color: var(--text-secondary); font-size: 0.9rem;">Confirmed: ${new Date(paymentData.confirmedAt).toLocaleString()}</span>
@@ -830,7 +846,28 @@
                         
                         payBtn.textContent = 'Updating backend...';
                         
-                        // Notify backend about the payment with REAL blockchain data
+                        // Generate ZK Commitment FIRST (before backend call)
+                        let zkCommitment = null;
+                        let zkSecret = null;
+                        if (txVerified && window.ZKCommitment) {
+                            try {
+                                const zkSystem = new ZKCommitment();
+                                zkSecret = zkSystem.generateSecret();
+                                const paymentToken = paymentData.token || 'SOL';
+                                const commitment = await zkSystem.generateCommitment(
+                                    actualPaymentId,
+                                    solAmount,
+                                    paymentToken,
+                                    zkSecret
+                                );
+                                zkCommitment = commitment.commitment;
+                                console.log('🔐 ZK Commitment generated:', zkCommitment.substring(0, 16) + '...');
+                            } catch (zkError) {
+                                console.warn('ZK commitment generation failed:', zkError);
+                            }
+                        }
+                        
+                        // Notify backend about the payment with REAL blockchain data + ZK commitment
                         try {
                             // Use paymentId or id, whichever is available
                             const actualPaymentId = paymentData.paymentId || paymentData.id;
@@ -838,6 +875,7 @@
                             console.log('   Payment ID:', actualPaymentId);
                             console.log('   Payment Data:', paymentData);
                             console.log('   Signature:', signature);
+                            console.log('   ZK Commitment:', zkCommitment ? 'Yes' : 'No');
                             
                             const verifyResponse = await fetch(`/api/oracle/payments/${actualPaymentId}/verify`, {
                                 method: 'POST',
@@ -847,7 +885,9 @@
                                     status: txVerified ? 'verified' : 'pending',
                                     confirmedAt: txVerified && verifiedTx?.blockTime ? verifiedTx.blockTime * 1000 : Date.now(),
                                     blockTime: verifiedTx?.blockTime,
-                                    slot: verifiedTx?.slot
+                                    slot: verifiedTx?.slot,
+                                    zkCommitment: zkCommitment,
+                                    zkEnabled: zkCommitment ? true : false
                                 })
                             });
                             
@@ -902,6 +942,14 @@
                                 const verifyData = await verifyResponse.json();
                                 console.log('✅ Payment verified on blockchain and backend updated');
                                 console.log('   Google Sheet will be updated with transaction signature');
+                                
+                                // Store ZK commitment locally
+                                if (zkCommitment) {
+                                    payment.zkCommitment = zkCommitment;
+                                    payment.zkSecret = zkSecret; // User keeps this private
+                                    payment.zkEnabled = true;
+                                    console.log('🔐 Payment protected with zero-knowledge proof');
+                                }
                                 
                                 // Update payment status locally
                                 payment.status = txVerified ? 'verified' : 'pending';

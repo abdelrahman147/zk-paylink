@@ -78,9 +78,9 @@
                         Secure, verifiable, and completely private. Play games, make payments, prove without revealing.
                     </p>
                     <div class="hero-actions">
-                        <button class="btn-primary btn-large" id="connect-wallet-hero-btn">Connect Wallet</button>
                         <button class="btn-primary btn-large" id="try-demo-btn">Try Payments</button>
                         <button class="btn-secondary btn-large" id="view-docs-btn">Play Game</button>
+                        <button class="btn-secondary btn-large" id="buy-token-btn">Buy Token</button>
                     </div>
                     <div class="hero-stats">
                         <div class="stat">
@@ -112,9 +112,6 @@
             <div class="merchant-tabs">
                 <button class="merchant-tab active" data-tab="overview">Overview</button>
                 <button class="merchant-tab" data-tab="payments">Payments</button>
-                <button class="merchant-tab" data-tab="verification">ZK Verification</button>
-                <button class="merchant-tab" data-tab="webhooks">Webhooks</button>
-                <button class="merchant-tab" data-tab="settings">Settings</button>
             </div>
             <div class="merchant-content">
                 <div id="merchant-overview" class="merchant-tab-content active">
@@ -164,70 +161,9 @@
                     </div>
                     <div id="merchant-payments-list"></div>
                 </div>
-                <div id="merchant-verification" class="merchant-tab-content">
-                    <h3>Zero-Knowledge Verification</h3>
-                    <div id="merchant-verification-content">
-                        <div class="zk-info">
-                            <h4>How ZK Verification Works</h4>
-                            <ol>
-                                <li>Payment is made to a Solana wallet address</li>
-                                <li>ZK proof is generated proving payment amount without revealing details</li>
-                                <li>Oracle verifies the proof and confirms payment</li>
-                                <li>Merchant receives confirmation without seeing transaction details</li>
-                            </ol>
-                        </div>
-                        <div class="verification-form" style="margin-top: 2rem;">
-                            <h4>Verify Payment</h4>
-                            <div class="checkout-form-group">
-                                <label>Transaction Signature</label>
-                                <input type="text" id="tx-hash-input" placeholder="Solana transaction signature">
-                            </div>
-                            <div class="checkout-form-group">
-                                <label>Expected Amount (SOL)</label>
-                                <input type="number" id="verify-amount" step="0.00000001" placeholder="0.00000000">
-                        </div>
-                            <button class="btn-primary" id="zk-verify-btn">Generate & Verify ZK Proof</button>
-                            <div id="zk-verification-result" style="margin-top: 1rem;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="merchant-settings" class="merchant-tab-content">
-                    <h3>Oracle Settings</h3>
-                    <div id="merchant-settings-content">
-                        <div class="settings-form">
-                            <div class="checkout-form-group">
-                                <label>Solana Wallet Address</label>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <input type="text" id="sol-address" placeholder="Paste your Solana wallet address here" style="flex: 1;">
-                                    <button type="button" class="btn-secondary" onclick="pasteAddress()" style="white-space: nowrap;">Paste</button>
-            </div>
-                                <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">Your Solana wallet address for receiving payments. You can paste it from your clipboard.</small>
-                            </div>
-                            <div class="checkout-form-group">
-                                <label>Default Payment Token</label>
-                                <select id="default-token" class="checkout-form-group" style="width: 100%; padding: 0.75rem;">
-                                    <option value="SOL">SOL (Solana)</option>
-                                    <option value="USDC">USDC (USD Coin)</option>
-                                    <option value="USDT">USDT (Tether)</option>
-                                    <option value="EURC">EURC (Euro Coin)</option>
-                                </select>
-                                <small style="color: var(--text-secondary);">Default token for payments</small>
-                            </div>
-                            <div class="checkout-form-group">
-                                <label>Payment Confirmation Threshold</label>
-                                <input type="number" id="confirmation-threshold" value="1" min="1" max="10">
-                                <small style="color: var(--text-secondary);">Number of confirmations required</small>
-                            </div>
-                            <button class="btn-primary" onclick="saveOracleSettings()" style="margin-top: 1rem;">Save Settings</button>
-                        </div>
-                    </div>
-                </div>
-                <div id="merchant-webhooks" class="merchant-tab-content">
-                    <div class="merchant-header">
-                        <h3>Webhook Management</h3>
-                        <button class="btn-primary" id="add-webhook-btn">Add Webhook</button>
-                    </div>
-                    <div id="webhooks-list"></div>
+
+
+
                 </div>
             </div>
         </div>
@@ -410,6 +346,7 @@
         <script src="mini-game.js"></script>
         <script src="anti-cheat.js"></script>
     <script src="payment-storage.js"></script>
+    <script src="zk-commitment.js"></script>
     <script src="zk-proof-service.js"></script>
     <script src="zec-oracle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>

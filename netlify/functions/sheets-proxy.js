@@ -313,7 +313,7 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
             await ensurePaymentSheet(actualSheetId, sheetName, accessToken);
 
                 // Append payment row - ensure all values are properly formatted
-                // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
+                // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof, M=ZKCommitment
                 // CRITICAL: Use the FULL payment ID, not truncated, when updating
                 const fullPaymentId = String(payment.id || '').trim();
                 
@@ -350,7 +350,8 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                     String(payment.transactionSignature || '').trim(), // Transaction signature
                     payment.createdAt ? new Date(payment.createdAt).toISOString() : new Date().toISOString(),
                     payment.confirmedAt ? new Date(payment.confirmedAt).toISOString() : '',
-                    JSON.stringify(publicProof)
+                    JSON.stringify(publicProof),
+                    String(payment.zkCommitment || '') // ZK commitment hash for privacy
                 ];
                 
                 console.log(`[Payment Storage] Preparing values array for payment ${fullPaymentId}`);
@@ -522,8 +523,8 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                     console.log(`[Payment Storage] ZK Proof (public):`, JSON.stringify(publicProof));
                     
                     // Force update with explicit column mapping to ensure correct data placement
-                    // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof
-                    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:L${existingRowIndex}?valueInputOption=RAW`;
+                    // Column mapping: A=ID, B=Amount, C=Currency, D=Token, E=TokenAmount, F=OrderID, G=MerchantAddress, H=Status, I=TransactionSignature, J=CreatedAt, K=ConfirmedAt, L=ZKProof, M=ZKCommitment
+                    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A${existingRowIndex}:M${existingRowIndex}?valueInputOption=RAW`;
                     
                     console.log(`[Payment Storage] Update URL: ${updateUrl}`);
                     console.log(`[Payment Storage] FORCE UPDATING with status: "${payment.status}", signature: "${payment.transactionSignature || ''}"`);
@@ -641,7 +642,7 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                     }
             } else {
                 // APPEND new row (payment doesn't exist yet)
-                const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A:L:append?valueInputOption=RAW`;
+                const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${actualSheetId}/values/${sheetName}!A:M:append?valueInputOption=RAW`;
                 const appendResponse = await fetch(appendUrl, {
                     method: 'POST',
                     headers: {
@@ -700,11 +701,11 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 const correctHeaders = [
                     'Payment ID', 'Amount (USD)', 'Currency', 'Token', 'Token Amount',
                     'Order ID', 'Merchant Address', 'Status', 'Transaction Signature',
-                    'Created At', 'Confirmed At', 'ZK Proof'
+                    'Created At', 'Confirmed At', 'ZK Proof', 'ZK Commitment'
                 ];
                 
                 // Update headers with explicit column widths to prevent truncation
-                const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(paymentTab)}!A1:L1?valueInputOption=RAW`;
+                const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(paymentTab)}!A1:M1?valueInputOption=RAW`;
                 const updateResponse = await fetch(updateUrl, {
                     method: 'PUT',
                     headers: {
@@ -811,7 +812,7 @@ async function handlePaymentStorage(event, accessToken, serviceAccount) {
                 // No sheet ID means no payments yet
                 return { statusCode: 200, headers, body: JSON.stringify({ success: true, payments: [] }) };
             }
-            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A2:L`;
+            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A2:M`;
             const readResponse = await fetch(readUrl, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
@@ -1135,7 +1136,7 @@ async function createNewPaymentSheet(accessToken) {
         const newSheetId = data.spreadsheetId;
         
         // Add headers
-        const headersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${newSheetId}/values/payment!A1:L1?valueInputOption=RAW`;
+        const headersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${newSheetId}/values/payment!A1:M1?valueInputOption=RAW`;
         await fetch(headersUrl, {
             method: 'PUT',
             headers: {
@@ -1146,7 +1147,7 @@ async function createNewPaymentSheet(accessToken) {
                 values: [[
                     'Payment ID', 'Amount (USD)', 'Currency', 'Token', 'Token Amount',
                     'Order ID', 'Merchant Address', 'Status', 'Transaction Signature',
-                    'Created At', 'Confirmed At', 'ZK Proof'
+                    'Created At', 'Confirmed At', 'ZK Proof', 'ZK Commitment'
                 ]]
             })
         });
@@ -1207,7 +1208,7 @@ async function ensurePaymentSheet(sheetId, sheetName, accessToken) {
         }
 
         // Ensure headers exist and are correct
-        const headersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:L1`;
+        const headersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:M1`;
         const headersResponse = await fetch(headersUrl, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
@@ -1215,7 +1216,7 @@ async function ensurePaymentSheet(sheetId, sheetName, accessToken) {
         const correctHeaders = [
             'Payment ID', 'Amount (USD)', 'Currency', 'Token', 'Token Amount',
             'Order ID', 'Merchant Address', 'Status', 'Transaction Signature',
-            'Created At', 'Confirmed At', 'ZK Proof'
+            'Created At', 'Confirmed At', 'ZK Proof', 'ZK Commitment'
         ];
 
         let needsHeaderFix = false;
@@ -1269,7 +1270,7 @@ async function ensurePaymentSheet(sheetId, sheetName, accessToken) {
             
             for (const tabName of possibleTabNames) {
                 try {
-                    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}!A1:L1?valueInputOption=RAW`;
+                    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}!A1:M1?valueInputOption=RAW`;
                     const updateResponse = await fetch(updateUrl, {
                         method: 'PUT',
                         headers: {
@@ -1460,10 +1461,10 @@ async function createSheetTab(sheetId, tabName, accessToken) {
         const headers = [
             'Payment ID', 'Amount (USD)', 'Currency', 'Token', 'Token Amount',
             'Order ID', 'Merchant Address', 'Status', 'Transaction Signature',
-            'Created At', 'Confirmed At', 'ZK Proof'
+            'Created At', 'Confirmed At', 'ZK Proof', 'ZK Commitment'
         ];
         
-        const headersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}!A1:L1?valueInputOption=RAW`;
+        const headersUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}!A1:M1?valueInputOption=RAW`;
         await fetch(headersUrl, {
             method: 'PUT',
             headers: {
